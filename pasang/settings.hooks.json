@@ -1,4 +1,5 @@
 {
+  "_catatan": "PENAMPUNG: `python3` di setiap command SELALU diganti penafsir mesin pemasang oleh ingat/pasang.py (terapkan_penafsir). Jangan menyalin berkas ini apa adanya ke ~/.claude/settings.json — di Windows `python3` jatuh ke stub Microsoft Store dan hook gagal diam-diam. Kunci ini diabaikan oleh gabung_hooks.",
   "hooks": {
     "PostToolUse": [
       {

@@ -5,14 +5,17 @@ from __future__ import annotations
 import io
 import json
 import os
+import shlex
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
 
 from ingat.aplikasi import Aplikasi, KONFIG_DEFAULT
-from ingat.pasang import gabung_hooks, pasang
+from ingat.pasang import PENANDA_HOOK, gabung_hooks, pasang, penafsir, terapkan_penafsir
 from ingat.tangkap import Penangkap, deteksi_gagal, tentukan_lingkup, main
 
 
@@ -190,11 +193,13 @@ class Pasang(unittest.TestCase):
         lama = {"hooks": {"PostToolUse": [{"matcher": "Write", "hooks": [{"type": "command", "command": "pnpm lint"}]}]}}
         baru = {"hooks": {"PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 -m ingat.tangkap PostToolUse"}]}],
                           "Stop": [{"hooks": [{"type": "command", "command": "python3 -m ingat.tangkap Stop"}]}]}}
-        hasil, n = gabung_hooks(lama, baru)
+        hasil, n, diperbarui = gabung_hooks(lama, baru)
         self.assertEqual(n, 2)
+        self.assertEqual(diperbarui, 0)
         self.assertEqual(len(hasil["hooks"]["PostToolUse"]), 2, "entri lama utuh, entri ingat ditambah")
-        hasil2, n2 = gabung_hooks(hasil, baru)
+        hasil2, n2, d2 = gabung_hooks(hasil, baru)
         self.assertEqual(n2, 0, "idempoten")
+        self.assertEqual(d2, 0, "idempoten")
         self.assertEqual(hasil2, hasil)
 
     def test_pasang_cetak_dulu_lalu_tulis(self):
@@ -219,6 +224,117 @@ class Pasang(unittest.TestCase):
             self.assertTrue(any("sudah ada" in l for l in lap2["langkah"]), "idempoten")
         finally:
             shutil.rmtree(rumah, ignore_errors=True)
+
+    @staticmethod
+    def _exe(perintah: str) -> str:
+        """argv[0] dari sebuah baris perintah hook, tanpa merusak backslash Windows."""
+        return shlex.split(perintah, posix=False)[0].strip('"')
+
+    def test_perintah_hook_memakai_penafsir_yang_benar_benar_ada(self):
+        """Yang ditulis ke settings.json harus penafsir mesin INI, bukan literal templat.
+
+        Sebelum perbaikan ini semua hook memakai literal `python3`; di Windows nama itu jatuh
+        ke stub Microsoft Store (keluar kode 49) sehingga keenam hook gagal tanpa jejak —
+        handler tangkap memang selalu exit 0.
+        """
+        rumah = tempfile.mkdtemp(prefix="ingat-rumah-")
+        try:
+            pasang(tulis=True, rumah=rumah)
+            with open(os.path.join(rumah, ".claude", "settings.json")) as f:
+                s = json.load(f)
+            perintah = [h["command"] for grup in s["hooks"].values() for g in grup for h in g["hooks"]]
+            self.assertEqual(len(perintah), 6, "keenam hook ditulis")
+            for p in perintah:
+                self.assertIn(PENANDA_HOOK, p)
+                exe = self._exe(p)
+                self.assertTrue(os.path.exists(exe) or shutil.which(exe), f"penafsir {exe!r} tidak ada di mesin ini")
+                # bukti terkuat: jalankan, dan pastikan ia benar-benar Python 3
+                keluar = subprocess.run([exe, "-c", "import sys; print(sys.version_info[0])"],
+                                        capture_output=True, text=True)
+                self.assertEqual(keluar.returncode, 0, f"{exe!r} tidak bisa dijalankan: {keluar.stderr}")
+                self.assertEqual(keluar.stdout.strip(), "3", f"{exe!r} bukan Python 3")
+            # MCP: `command` adalah argv[0], jadi harus path telanjang tanpa kutip
+            with open(os.path.join(rumah, ".claude", ".mcp.json")) as f:
+                m = json.load(f)
+            self.assertEqual(m["mcpServers"]["ingat"]["command"], penafsir())
+        finally:
+            shutil.rmtree(rumah, ignore_errors=True)
+
+    def test_terapkan_penafsir_mengganti_literal_templat_dan_tidak_menyentuh_yang_lain(self):
+        """Arah kedua: masukan yang HARUS berubah, dan tetangga yang HARUS utuh."""
+        templat = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "python3 -m ingat.tangkap Stop"},
+                                                 {"type": "command", "command": "pnpm lint"}]}]}}
+        hasil = terapkan_penafsir(templat, "/opt/py venv/bin/python")
+        perintah = [h["command"] for h in hasil["hooks"]["Stop"][0]["hooks"]]
+        self.assertEqual(perintah[0], '"/opt/py venv/bin/python" -m ingat.tangkap Stop', "path berspasi dikutip")
+        self.assertEqual(perintah[1], "pnpm lint", "perintah non-ingat tidak disentuh")
+        self.assertEqual(templat["hooks"]["Stop"][0]["hooks"][0]["command"], "python3 -m ingat.tangkap Stop",
+                         "templat asli tidak dimutasi")
+
+    def test_pasang_ulang_memperbarui_penafsir_lama_tanpa_menduplikasi_hook(self):
+        """Mesin lama menulis `python3`; pemasangan ulang harus MEMPERBARUI, bukan menambah.
+
+        Kalau diduplikasi, dua hook menembak di tiap peristiwa — dan yang lama tetap rusak.
+        """
+        lama = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "python3 -m ingat.tangkap Stop"}]}]}}
+        baru = terapkan_penafsir({"hooks": {"Stop": [{"hooks": [{"type": "command",
+                                                                "command": "python3 -m ingat.tangkap Stop"}]}]}},
+                                 sys.executable)
+        hasil, n, diperbarui = gabung_hooks(lama, baru)
+        self.assertEqual(n, 0, "tidak ada grup baru")
+        self.assertEqual(diperbarui, 1, "penafsir entri lama diperbarui")
+        self.assertEqual(len(hasil["hooks"]["Stop"]), 1, "tetap satu grup")
+        self.assertEqual(self._exe(hasil["hooks"]["Stop"][0]["hooks"][0]["command"]), sys.executable)
+
+
+class EncodingFailure(Dasar):
+    """Bab 11: metrik `sesi_tanpa_episode` + alarm 3 sesi berturut (Schacter: absentmindedness)."""
+
+    def _sesi_kosong(self, sid: str):
+        self.pt.tangani(self.ev("SessionEnd", session_id=sid))
+
+    def _sesi_berisi(self, sid: str):
+        self.pt.tangani(self.ev("PostToolUse", session_id=sid, tool_name="Bash",
+                                tool_input={"command": "pwd"}, tool_response={"stdout": "/x", "stderr": ""}))
+        self.pt.tangani(self.ev("SessionEnd", session_id=sid))
+
+    def test_metrik_muncul_di_ringkasan(self):
+        r = self.app.store.ringkasan_metrik()
+        self.assertEqual(r["sesi_tanpa_episode"], 0)
+        self.assertEqual(r["sesi_tanpa_episode_berturut"], 0)
+        self.assertEqual(r["alarm"], [])
+        self._sesi_kosong("k1")
+        r = self.app.store.ringkasan_metrik()
+        self.assertEqual(r["sesi_tanpa_episode"], 1)
+        self.assertEqual(r["sesi_tanpa_episode_berturut"], 1)
+
+    def test_dua_sesi_kosong_belum_menyalakan_alarm(self):
+        self._sesi_kosong("k1")
+        self._sesi_kosong("k2")
+        r = self.app.store.ringkasan_metrik()
+        self.assertEqual(r["sesi_tanpa_episode_berturut"], 2)
+        self.assertEqual(r["alarm"], [], "ambang Bab 11 adalah 3, bukan 2")
+
+    def test_tiga_sesi_kosong_berturut_menyalakan_alarm(self):
+        for s in ("k1", "k2", "k3"):
+            self._sesi_kosong(s)
+        r = self.app.store.ringkasan_metrik()
+        self.assertEqual(r["sesi_tanpa_episode_berturut"], 3)
+        self.assertEqual(len(r["alarm"]), 1)
+        self.assertEqual(r["alarm"][0]["metrik"], "sesi_tanpa_episode")
+        self.assertEqual(r["alarm"][0]["ambang"], 3)
+        self.assertIn("hook tidak jalan", r["alarm"][0]["pesan"])
+
+    def test_satu_sesi_berisi_memutus_deret(self):
+        """Tiga sesi kosong TERPISAH bukan encoding failure — hanya sesi sepi."""
+        self._sesi_kosong("k1")
+        self._sesi_kosong("k2")
+        self._sesi_berisi("isi-1")
+        self._sesi_kosong("k3")
+        r = self.app.store.ringkasan_metrik()
+        self.assertEqual(r["sesi_tanpa_episode"], 3, "totalnya tetap tiga")
+        self.assertEqual(r["sesi_tanpa_episode_berturut"], 1, "deret dihitung ulang dari sesi berisi")
+        self.assertEqual(r["alarm"], [], "total 3 tidak sama dengan 3 BERTURUT")
 
 
 if __name__ == "__main__":

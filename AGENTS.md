@@ -31,9 +31,11 @@ di Windows PowerShell 5.1 (parse error, bukan galat runtime). Untuk npm pakai `-
 - `… tanya` lalu `… jawab --berkas <path>` — konsolidasi berpandu pertanyaan (v0.5, `ingat/tanya.py`): mesin bertanya dari data, manusia menjawab di blok ```jawab```, jawaban diterapkan ke vault lalu disinkronkan.
 - Model embedding: `model/README.md` (Ollama, dibangun sendiri; konfigurasi `embedding.jenis = "ollama"`).
 - Hook Claude Code: `<py> -m ingat pasang [--tulis]`; handler `ingat/tangkap.py` (selalu exit 0; galat ke `<dir_data>/tangkap.log`).
-  Catatan Windows: templat `pasang/settings.hooks.json` memaku `python3 -m ingat.tangkap …` di keenam
-  hook. Di Windows semuanya akan diam-diam gagal — dan karena handler memang dirancang selalu exit 0,
-  kegagalan itu tidak kelihatan sama sekali. Belum diperbaiki; butuh keputusan pemilik soal bentuknya.
+  Penafsir di perintah hook **dideteksi**, bukan disalin dari templat: `pasang.penafsir()` memakai
+  `sys.executable` (penafsir yang menjalankan `pasang`, jadi dijamin bisa mengimpor `ingat`), dikutip
+  bila path-nya berspasi. `python3` di `pasang/settings.hooks.json` hanyalah penampung. Entri hook
+  ingat dikenali dari `-m ingat.tangkap`, sehingga memasang ulang di mesin dengan penafsir berbeda
+  **memperbarui** entri lama, bukan menambah grup kedua yang ikut menembak di tiap peristiwa.
 - Deploy VPS: `docker compose up -d --build` (non-root, read-only; lihat `docker-compose.yml`).
 
 ## Cara kerja di repo ini

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""`python3 -m ingat pasang [--tulis]` — pasang hook, perintah /koreksi, MCP, dan konfigurasi default.
+"""`<python> -m ingat pasang [--tulis]` — pasang hook, perintah /koreksi, MCP, dan konfigurasi default.
 
 Tanpa `--tulis`: hanya mencetak apa yang AKAN ditulis (tidak menyentuh berkas). Dengan `--tulis`:
 - ~/.ingat/konfigurasi.json    (dibuat bila belum ada; yang sudah ada tidak ditimpa)
@@ -14,9 +14,71 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 
 AKAR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLAT = os.path.join(AKAR, "pasang")
+
+#: Penanda `-m …` yang menandai sebuah perintah hook sebagai milik ingat, apa pun penafsirnya.
+PENANDA_HOOK = "-m ingat.tangkap"
+
+
+def penafsir() -> str:
+    """Penafsir Python yang ditulis ke settings.json / .mcp.json di mesin ini.
+
+    Dipakai `sys.executable` — penafsir yang SEDANG menjalankan `pasang`. Itu satu-satunya
+    yang dijamin bisa mengimpor paket `ingat` yang baru saja dipasang (termasuk bila
+    pemasangan dilakukan di dalam venv).
+
+    Nama telanjang tidak dipakai karena tidak ada satu pun yang benar di semua OS:
+    `python3` tidak dipasang oleh installer python.org di Windows — nama itu jatuh ke stub
+    Microsoft Store yang keluar dengan kode bukan-nol, dan karena handler tangkap memang
+    dirancang selalu exit 0, kegagalannya tidak akan kelihatan sama sekali. Sebaliknya
+    banyak distribusi Linux tidak memasang `python` sama sekali.
+    """
+    if sys.executable:
+        return sys.executable
+    for nama in ("python3", "python", "py"):  # penafsir tertanam/beku: cari di PATH
+        ada = shutil.which(nama)
+        if ada:
+            return ada
+    raise RuntimeError("tidak ada penafsir Python yang bisa ditulis ke perintah hook")
+
+
+def _kutip(exe: str) -> str:
+    """Perintah hook dijalankan lewat shell, jadi path berspasi wajib dikutip."""
+    return f'"{exe}"' if " " in exe and not exe.startswith('"') else exe
+
+
+def _sisa_hook(perintah: str) -> str | None:
+    """Bagian `-m ingat.tangkap …` bila `perintah` adalah hook ingat; None bila bukan.
+
+    Dipakai sebagai identitas hook supaya entri yang ditulis mesin lain (penafsir berbeda)
+    dikenali sebagai entri yang SAMA — diperbarui, bukan diduplikasi.
+    """
+    i = perintah.find(PENANDA_HOOK)
+    return perintah[i:] if i > 0 else None
+
+
+def _kunci(perintah: str) -> str:
+    return _sisa_hook(perintah) or perintah
+
+
+def terapkan_penafsir(templat: dict, py: str | None = None) -> dict:
+    """Salinan `templat` dengan tiap perintah hook ingat memakai penafsir mesin ini.
+
+    Templat di `pasang/settings.hooks.json` menulis `python3` sebagai penampung; nilai itu
+    tidak pernah dipakai apa adanya — selalu diganti di sini.
+    """
+    py = _kutip(py or penafsir())
+    hasil = json.loads(json.dumps(templat))
+    for grup in hasil.get("hooks", {}).values():
+        for g in grup:
+            for h in g.get("hooks", []):
+                sisa = _sisa_hook(h.get("command", ""))
+                if sisa:
+                    h["command"] = f"{py} {sisa}"
+    return hasil
 
 
 def _baca_json(p: str) -> dict:
@@ -33,20 +95,31 @@ def _tulis_json(p: str, d: dict):
         f.write("\n")
 
 
-def gabung_hooks(lama: dict, tambahan: dict) -> tuple[dict, int]:
-    """Gabungkan `hooks` tanpa menduplikasi entri yang perintahnya sama. Kembalikan (hasil, jumlah_ditambah)."""
+def gabung_hooks(lama: dict, tambahan: dict) -> tuple[dict, int, int]:
+    """Gabungkan `hooks` tanpa menduplikasi entri. Kembalikan (hasil, ditambah, penafsir_diperbarui).
+
+    Entri ingat dikenali dari `-m ingat.tangkap …`, bukan dari perintah utuh. Tanpa itu,
+    memasang ulang di mesin dengan penafsir berbeda akan menambah grup KEDUA yang ikut
+    menembak di setiap peristiwa, bukan memperbarui yang lama.
+    """
     hasil = json.loads(json.dumps(lama))
     hooks = hasil.setdefault("hooks", {})
-    n = 0
+    n = diperbarui = 0
     for peristiwa, grup_baru in tambahan.get("hooks", {}).items():
         grup = hooks.setdefault(peristiwa, [])
-        perintah_ada = {h.get("command") for g in grup for h in g.get("hooks", [])}
+        ada = {_kunci(h.get("command", "")): h for g in grup for h in g.get("hooks", [])}
         for g in grup_baru:
-            if all(h.get("command") in perintah_ada for h in g.get("hooks", [])):
+            baru = g.get("hooks", [])
+            if not all(_kunci(h.get("command", "")) in ada for h in baru):
+                grup.append(g)
+                n += 1
                 continue
-            grup.append(g)
-            n += 1
-    return hasil, n
+            for h in baru:  # entri sudah ada — samakan penafsirnya dengan mesin ini
+                lama_h = ada[_kunci(h.get("command", ""))]
+                if lama_h.get("command") != h.get("command"):
+                    lama_h["command"] = h["command"]
+                    diperbarui += 1
+    return hasil, n, diperbarui
 
 
 def rencana(rumah: str | None = None) -> list[tuple[str, str]]:
@@ -61,7 +134,8 @@ def rencana(rumah: str | None = None) -> list[tuple[str, str]]:
 
 def pasang(tulis: bool = False, rumah: str | None = None) -> dict:
     rumah = rumah or os.path.expanduser("~")
-    laporan = {"tulis": tulis, "langkah": []}
+    py = penafsir()
+    laporan = {"tulis": tulis, "penafsir": py, "langkah": []}
     tujuan = dict(rencana(rumah))
 
     # 1. konfigurasi (tidak menimpa)
@@ -82,9 +156,15 @@ def pasang(tulis: bool = False, rumah: str | None = None) -> dict:
     # 2. hooks (gabung)
     p = tujuan["settings.hooks"]
     lama = _baca_json(p)
-    baru, n = gabung_hooks(lama, _baca_json(os.path.join(TEMPLAT, "settings.hooks.json")))
-    laporan["langkah"].append(f"gabung {n} grup hook ke {p}" if n else f"hook sudah ada di {p}")
-    if tulis and n:
+    templat = terapkan_penafsir(_baca_json(os.path.join(TEMPLAT, "settings.hooks.json")), py)
+    baru, n, diperbarui = gabung_hooks(lama, templat)
+    if n:
+        laporan["langkah"].append(f"gabung {n} grup hook ke {p}")
+    elif diperbarui:
+        laporan["langkah"].append(f"perbarui penafsir {diperbarui} hook ingat di {p}")
+    else:
+        laporan["langkah"].append(f"hook sudah ada di {p}")
+    if tulis and (n or diperbarui):
         _tulis_json(p, baru)
 
     # 3. /koreksi
@@ -97,19 +177,29 @@ def pasang(tulis: bool = False, rumah: str | None = None) -> dict:
     # 4. MCP
     p = tujuan["mcp"]
     lama = _baca_json(p)
-    if "ingat" in lama.get("mcpServers", {}):
+    ada = lama.get("mcpServers", {}).get("ingat")
+    if ada and ada.get("command") == py:
         laporan["langkah"].append(f"server MCP ingat sudah ada di {p}")
+    elif ada:
+        # penafsir berubah (pindah mesin, venv baru) — perbarui, jangan biarkan menunjuk yang hilang
+        laporan["langkah"].append(f"perbarui penafsir server MCP ingat di {p}")
+        if tulis:
+            ada["command"] = py
+            _tulis_json(p, lama)
     else:
         laporan["langkah"].append(f"tambah server MCP ingat ke {p}")
         if tulis:
             templat = _baca_json(os.path.join(TEMPLAT, "mcp.json"))["mcpServers"]["ingat"]
+            # `command` di MCP adalah argv[0], BUKAN baris shell — jangan dikutip.
+            templat["command"] = py
             templat["args"] = [os.path.expanduser(a) if a.startswith("~") else a for a in templat["args"]]
             lama.setdefault("mcpServers", {})["ingat"] = templat
             _tulis_json(p, lama)
 
     laporan["catatan"] = [
-        "Paket ingat harus bisa diimpor oleh python3 yang dipanggil hook: `pip install -e .` di repo ini.",
+        f"Hook dan MCP ditulis memakai penafsir ini: {py}",
+        f"Paket ingat harus bisa diimpor olehnya: `{py} -m pip install -e .` di repo ini.",
         "Model embedding: bash model/bangun-gguf.sh && ollama create ingat-e5-base -f model/Modelfile (atau embedding.jenis=lokal untuk uji).",
-        "Uji: buka sesi Claude Code di repo mana pun, jalankan satu perintah, lalu `python3 -m ingat --konfig ~/.ingat/konfigurasi.json metrik` (episode_aktif harus > 0).",
+        f"Uji: buka sesi Claude Code di repo mana pun, jalankan satu perintah, lalu `{py} -m ingat --konfig ~/.ingat/konfigurasi.json metrik` (episode_aktif harus > 0).",
     ]
     return laporan

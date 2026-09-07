@@ -441,4 +441,31 @@ class Store:
         b = self.db.execute("SELECT sesi, COUNT(*) c, SUM(token_dipakai) t FROM panggilan_ingat GROUP BY sesi ORDER BY MAX(id) DESC LIMIT 20").fetchall()
         r["panggilan_per_sesi"] = [{"sesi": x["sesi"], "panggilan": x["c"], "token": x["t"]} for x in b]
         r["metrik_terakhir"] = [dict(x) for x in self.db.execute("SELECT waktu,nama,nilai,konteks FROM metrik ORDER BY id DESC LIMIT 30")]
+        r.update(self.encoding_failure())
         return r
+
+    #: Bab 11 — ambang alarm "sesi tanpa episode" (Schacter: absentmindedness).
+    AMBANG_SESI_KOSONG = 3
+
+    def encoding_failure(self) -> dict:
+        """Bab 11: sesi yang berakhir tanpa episode, plus alarm bila terjadi berturut-turut.
+
+        Deret dihitung dari urutan AKHIR SESI — `sesi_tanpa_episode` (gagal) berselang-seling
+        dengan `sesi_dengan_episode` (berhasil). Satu sesi berisi memutus deret; itulah yang
+        membedakan "hook mati" dari "kebetulan ada beberapa sesi sepi".
+        """
+        total = self.db.execute("SELECT COUNT(*) FROM metrik WHERE nama='sesi_tanpa_episode'").fetchone()[0]
+        baris = self.db.execute(
+            "SELECT nama FROM metrik WHERE nama IN ('sesi_tanpa_episode','sesi_dengan_episode') "
+            "ORDER BY id DESC LIMIT 50").fetchall()
+        berturut = 0
+        for x in baris:
+            if x["nama"] != "sesi_tanpa_episode":
+                break
+            berturut += 1
+        alarm = []
+        if berturut >= self.AMBANG_SESI_KOSONG:
+            alarm.append({"metrik": "sesi_tanpa_episode", "nilai": berturut, "ambang": self.AMBANG_SESI_KOSONG,
+                          "pesan": f"{berturut} sesi berturut berakhir tanpa episode — "
+                                   "hook tidak jalan atau cakupan tangkap bocor"})
+        return {"sesi_tanpa_episode": total, "sesi_tanpa_episode_berturut": berturut, "alarm": alarm}

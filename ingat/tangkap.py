@@ -201,6 +201,10 @@ class Penangkap:
         hasil = self.stop(sesi, lingkup)
         p = self._buf(sesi)
         os.replace(p, p + ".selesai")
+        # Pasangan dari sesi_tanpa_episode. Tanpa penanda sisi-sukses ini, "3 sesi berturut"
+        # (alarm Bab 11) tidak bisa dihitung — tabel metrik hanya berisi kegagalan, sehingga
+        # tiga sesi kosong yang terpisah berbulan-bulan terbaca seperti deret.
+        self.app.store.catat_metrik("sesi_dengan_episode", 1, sesi=sesi, lingkup=lingkup)
         return hasil
 
 
