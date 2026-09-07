@@ -15,7 +15,11 @@ export class PenyematPalsu implements Penyemat {
       for (const kata of t.toLowerCase().split(/\W+/).filter(Boolean)) {
         let h = 2166136261;
         for (let i = 0; i < kata.length; i++) h = (h ^ kata.charCodeAt(i)) * 16777619;
-        v[Math.abs(h) % this.dimensi] += 1;
+        // noUncheckedIndexedAccess membuat v[j] bertipe number|undefined. Indeksnya
+        // pasti dalam jangkauan (0 <= j < dimensi), jadi `?? 0` tidak pernah terpakai
+        // saat berjalan — ia hanya membuat penulisan ini jujur terhadap tipe.
+        const j = Math.abs(h) % this.dimensi;
+        v[j] = (v[j] ?? 0) + 1;
       }
       return normalisasiL2(v);
     });

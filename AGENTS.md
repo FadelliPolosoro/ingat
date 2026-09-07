@@ -13,12 +13,27 @@ Apache-2.0, privat sampai pemilik menyatakan siap. Pemilik: Tuan Muda (Fadelli P
 - `.claude/rules/*.md` — aturan bertaraf: kontrak, keamanan, uji, gaya-kode, lisensi.
 
 ## Perintah
-- `python3 -m unittest discover -s uji -p "uji_*.py" -t .` — suite Python (152 uji, harus OK).
-- `cd port/typescript && npm test` — suite port TS (type-stripping Node 22, tanpa install).
-- `python3 -m ingat --konfig konfigurasi.json <perintah>` — CLI (lihat `ingat/cli.py`).
+
+**Nama penafsir Python berbeda per OS.** Linux/macOS: `python3`. Windows: `python` atau `py -3` —
+installer python.org **tidak** memasang `python3.exe`, dan nama itu jatuh ke stub Microsoft Store yang
+keluar dengan kode bukan-nol. Di bawah ditulis `<py>`; ganti sekali sesuai OS.
+
+**Shell.** Perintah di bawah dijaga tetap satu baris tanpa `&&`, karena `&&` bukan pemisah pernyataan
+di Windows PowerShell 5.1 (parse error, bukan galat runtime). Untuk npm pakai `--prefix`, bukan `cd`.
+
+- `<py> -m unittest discover -s uji -p "uji_*.py" -t .` — suite Python (152 uji, harus OK).
+- `npm test --prefix port/typescript` — suite port TS (type-stripping Node 22, **tanpa** `npm install`).
+- `npm install --prefix port/typescript` sekali, lalu `npm run build --prefix port/typescript` — type-check
+  penuh `tsc` (strict + `noUncheckedIndexedAccess`). Hanya ini yang butuh install; `npm test` tidak, dan
+  type-stripping **tidak** memeriksa tipe — suite hijau bukan bukti tipe lolos.
+- `npm run cek-lisensi --prefix port/typescript` — pagar `.claude/rules/lisensi.md` atas dependensi dev.
+- `<py> -m ingat --konfig konfigurasi.json <perintah>` — CLI (lihat `ingat/cli.py`).
 - `… tanya` lalu `… jawab --berkas <path>` — konsolidasi berpandu pertanyaan (v0.5, `ingat/tanya.py`): mesin bertanya dari data, manusia menjawab di blok ```jawab```, jawaban diterapkan ke vault lalu disinkronkan.
 - Model embedding: `model/README.md` (Ollama, dibangun sendiri; konfigurasi `embedding.jenis = "ollama"`).
-- Hook Claude Code: `python3 -m ingat pasang [--tulis]`; handler `ingat/tangkap.py` (selalu exit 0; galat ke `<dir_data>/tangkap.log`).
+- Hook Claude Code: `<py> -m ingat pasang [--tulis]`; handler `ingat/tangkap.py` (selalu exit 0; galat ke `<dir_data>/tangkap.log`).
+  Catatan Windows: templat `pasang/settings.hooks.json` memaku `python3 -m ingat.tangkap …` di keenam
+  hook. Di Windows semuanya akan diam-diam gagal — dan karena handler memang dirancang selalu exit 0,
+  kegagalan itu tidak kelihatan sama sekali. Belum diperbaiki; butuh keputusan pemilik soal bentuknya.
 - Deploy VPS: `docker compose up -d --build` (non-root, read-only; lihat `docker-compose.yml`).
 
 ## Cara kerja di repo ini
@@ -34,6 +49,7 @@ Apache-2.0, privat sampai pemilik menyatakan siap. Pemilik: Tuan Muda (Fadelli P
   `skema/ingat.sql` oleh `uji/uji_kontrak.py`. Ubah salah satu = ubah keduanya + port TS.
 - Frontmatter = subset YAML (satu kunci per baris; nilai skalar atau JSON flow). PyYAML opsional.
 - SQL portabel di kontrak; pragma hanya di `simpan.py`. Selisih skema Python vs kontrak → `SELARAS.md`.
-- Klaim "selesai" hanya setelah kedua suite hijau dan berkas terbukti ada di disk.
+- Klaim "selesai" hanya setelah kedua suite hijau, `tsc` lolos bila TS disentuh, dan berkas terbukti ada di disk.
+  Uji `skipped` dihitung sebagai utang, bukan lulus — uji interop Python↔TS pernah dilewati diam-diam berbulan-bulan.
 - Bahasa: identifier, komentar, pesan commit Bahasa Indonesia; istilah teknis Inggris boleh.
 - Tanpa dependensi runtime (Python stdlib; TS `node:sqlite`). PyYAML opsional saja.

@@ -15,6 +15,7 @@
     "cek-lisensi": "node --experimental-strip-types skrip/cek-lisensi.ts"
   },
   "devDependencies": {
+    "@types/node": "22.20.1",
     "typescript": "^5.7.0"
   }
 }
