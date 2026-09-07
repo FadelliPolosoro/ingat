@@ -25,15 +25,26 @@ print(ep.id)
 s.db.close()
 `;
 
+// Installer python.org di Windows hanya memasang `python.exe`; nama `python3` di sana jatuh ke stub
+// Microsoft Store yang keluar dengan kode bukan-nol. Coba berurutan, dan pastikan yang terpilih
+// memang Python 3 — jangan sampai `python` menunjuk Python 2 di distribusi lama.
+function cariPython(): string | null {
+  for (const nama of ['python3', 'python']) {
+    const p = spawnSync(nama, ['--version'], { encoding: 'utf8' });
+    if (p.status === 0 && /^Python 3\./.test(((p.stdout ?? '') + (p.stderr ?? '')).trim())) return nama;
+  }
+  return null;
+}
+
 test('DB tulisan Python terbaca port TS: versi kontrak, episode, transisi', (t) => {
-  const py = spawnSync('python3', ['--version']);
-  if (py.status !== 0) {
-    t.skip('python3 tidak tersedia — uji interop dilewati');
+  const py = cariPython();
+  if (py === null) {
+    t.skip('python3/python tidak tersedia — uji interop dilewati');
     return;
   }
   const dir = mkdtempSync(join(tmpdir(), 'ingat-interop-'));
   try {
-    const hasil = spawnSync('python3', ['-c', SKRIP, dir], { encoding: 'utf8' });
+    const hasil = spawnSync(py, ['-c', SKRIP, dir], { encoding: 'utf8' });
     assert.equal(hasil.status, 0, hasil.stderr);
     const id = hasil.stdout.trim();
     const db = bukaDb(join(dir, 'data', 'ingat.sqlite'));

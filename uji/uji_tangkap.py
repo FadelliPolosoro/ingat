@@ -212,7 +212,9 @@ class Pasang(unittest.TestCase):
             self.assertIn("ingat", m["mcpServers"])
             with open(os.path.join(rumah, ".ingat", "konfigurasi.json")) as f:
                 k = json.load(f)
-            self.assertTrue(k["dir_data"].startswith("/"), "~ diperluas")
+            # isabs, bukan startswith("/"): di Windows hasilnya "C:\\Users\\...".
+            # Kekuatan asersi tetap — "~/.ingat" yang belum diperluas tidak absolut di OS mana pun.
+            self.assertTrue(os.path.isabs(k["dir_data"]), "~ diperluas")
             lap2 = pasang(tulis=True, rumah=rumah)
             self.assertTrue(any("sudah ada" in l for l in lap2["langkah"]), "idempoten")
         finally:
