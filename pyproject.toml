@@ -1,0 +1,22 @@
+[project]
+name = "ingat"
+version = "0.3.0"
+description = "Sistem memori agent yang bisa diperiksa manusia — implementasi rujukan Spesifikasi Arsitektur Memori v0.3 (episode/pelajaran/prosedur/norma, konsolidasi, anti-Spalko, simpan-semua dengan redaksi)"
+authors = [{ name = "Fadelli Polosoro" }]
+license = { text = "Apache-2.0" }
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6"]
+
+[project.scripts]
+ingat = "ingat.cli:utama"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ingat*"]

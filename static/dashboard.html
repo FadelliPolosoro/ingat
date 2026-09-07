@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ingat — dashboard memori</title>
+<style>
+  :root{
+    --dasar:#E4E7E1; --dasar2:#DCDFD8; --tinta:#1F2A24; --garis:#B9C2B7;
+    --pudar:#7C8A7D; --cap:#A23B2E; --benang:#C9622E; --emas:#8C7A3E;
+    --gugur:#5B6B5C; --panel:#EEF0EA;
+    --serif: Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    --sans: -apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--dasar);color:var(--tinta);font-family:var(--sans);font-size:14px}
+  #app{display:none;height:100vh;grid-template-columns:240px 1fr 1fr;grid-template-rows:auto 1fr}
+  #app.siap{display:grid}
+  header{grid-column:1/4;display:flex;align-items:baseline;gap:10px;padding:10px 16px;border-bottom:1px solid var(--garis);background:var(--panel)}
+  header h1{font-family:var(--serif);font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
+  header .sub{color:var(--pudar);font-size:12px}
+  header .kanan{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:12px;color:var(--pudar)}
+  header .titik{width:7px;height:7px;border-radius:50%;background:var(--gugur);display:inline-block;margin-right:5px}
+
+  nav{border-right:1px solid var(--garis);overflow-y:auto;background:var(--dasar2)}
+  nav .grup{padding:10px 14px 4px}
+  nav .grup-judul{font-family:var(--serif);font-size:12px;color:var(--pudar);display:flex;align-items:center;gap:6px;margin-bottom:2px}
+  nav .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  nav .baris{display:block;width:100%;text-align:left;padding:5px 14px 5px 26px;border:0;background:transparent;
+             border-bottom:1px solid rgba(0,0,0,.05);font-family:var(--sans);font-size:12.5px;color:var(--tinta);
+             cursor:pointer;line-height:1.4}
+  nav .baris:hover{background:rgba(0,0,0,.04)}
+  nav .baris.aktif{background:var(--panel);box-shadow:inset 3px 0 0 var(--benang)}
+  nav .baris .meta{display:block;color:var(--pudar);font-size:10.5px;margin-top:1px}
+  nav .kosong{padding:14px;color:var(--pudar);font-size:12.5px}
+
+  main{overflow-y:auto;padding:22px 26px;border-right:1px solid var(--garis);background:var(--dasar)}
+  main h2{font-family:var(--serif);font-size:22px;margin:0 0 10px}
+  main .stempel{border:1px solid var(--garis);border-radius:2px;padding:8px 12px;display:inline-block;
+                 font-size:11.5px;color:var(--pudar);margin-bottom:16px;background:var(--panel)}
+  main .isi{white-space:pre-wrap;line-height:1.65;max-width:62ch;font-size:13.5px}
+  main .placeholder{color:var(--pudar);margin-top:60px;text-align:center;font-family:var(--serif);font-style:italic}
+
+  #papan{position:relative;overflow:hidden;background:
+      radial-gradient(circle at 50% 40%, #E9E4D4 0%, #DED6C0 60%, #D3C9AE 100%);
+      background-color:#DED6C0}
+  #papan svg{width:100%;height:100%;display:block;cursor:grab}
+  #papan .judul-panel{position:absolute;top:10px;left:14px;font-family:var(--serif);font-size:13px;color:#4A3E2A;z-index:2}
+  #papan .legenda{position:absolute;bottom:10px;left:14px;font-size:10.5px;color:#4A3E2A;z-index:2;display:flex;gap:10px;flex-wrap:wrap;max-width:70%}
+  #papan .legenda span{display:inline-flex;align-items:center;gap:4px}
+  #papan .legenda i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .node-label{font-family:var(--sans);font-size:10.5px;fill:#33291B;paint-order:stroke;stroke:#DED6C0;stroke-width:3px;pointer-events:none}
+  .simpul{cursor:grab}
+  .simpul:active{cursor:grabbing}
+  .benang-garis{stroke:var(--benang);stroke-opacity:.55;stroke-width:1.3}
+  .benang-garis.mengganti{stroke:var(--emas);stroke-dasharray:3 3}
+  .benang-garis.instrumen{stroke:var(--gugur);stroke-opacity:.4}
+  .redup{opacity:.15}
+
+  #gerbang{position:fixed;inset:0;background:var(--dasar);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+  #gerbang .kotak{background:var(--panel);border:1px solid var(--garis);border-radius:4px;padding:26px 30px;width:340px}
+  #gerbang h1{font-family:var(--serif);margin:0 0 4px;font-size:19px}
+  #gerbang p{color:var(--pudar);font-size:12.5px;margin:0 0 16px;line-height:1.5}
+  #gerbang input{width:100%;padding:8px 10px;font:inherit;border:1px solid var(--garis);border-radius:3px;margin-bottom:10px}
+  #gerbang button{width:100%;padding:8px;background:var(--tinta);color:var(--dasar);border:0;border-radius:3px;cursor:pointer;font:inherit}
+  #gerbang .galat{color:var(--cap);font-size:12px;min-height:16px}
+</style>
+</head>
+<body>
+
+<div id="gerbang">
+  <div class="kotak">
+    <h1>ingat</h1>
+    <p>Dashboard memori pribadi.</p>
+    <button id="gGoogle" style="background:#fff;color:#1F2A24;border:1px solid var(--garis);margin-bottom:10px">
+      Masuk dengan Google
+    </button>
+    <div style="text-align:center;color:var(--pudar);font-size:11px;margin:2px 0 10px">atau, mandiri (tanpa Google)</div>
+    <input id="gTotp" placeholder="Kode 6 digit dari aplikasi authenticator" inputmode="numeric" maxlength="6" style="margin-bottom:6px">
+    <button id="gTotpMasuk" style="margin-bottom:14px">Masuk dengan kode</button>
+    <div style="text-align:center;color:var(--pudar);font-size:11px;margin:-2px 0 14px">atau, lewat token</div>
+    <p style="font-size:11.5px">Token dan host disimpan di penyimpanan lokal browser ini saja — tidak dikirim ke mana pun selain server ingat milikmu sendiri.</p>
+    <input id="gHost" placeholder="Host, mis. https://memori.contoh-domain.id atau http://127.0.0.1:8765">
+    <input id="gToken" type="password" placeholder="Token (INGAT_TOKEN)">
+    <button id="gMasuk">Buka dengan token</button>
+    <div class="galat" id="gGalat"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>ingat</h1>
+    <span class="sub">dashboard memori</span>
+    <div class="kanan">
+      <span id="hStatus"><span class="titik"></span>menghubungkan…</span>
+      <span id="hLingkup"></span>
+      <a href="/auth/keluar" style="color:var(--pudar);font-size:11px">keluar</a>
+    </div>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"><div class="placeholder">Pilih catatan dari Registri atau klik simpul di Papan Bukti</div></main>
+  <div id="papan">
+    <div class="judul-panel">Papan Bukti</div>
+    <div class="legenda">
+      <span><i style="background:#1F2A24"></i>pelajaran</span>
+      <span><i style="background:#5B6B5C"></i>prosedur</span>
+      <span><i style="background:#8C7A3E"></i>norma</span>
+      <span><i style="background:#9AA79B"></i>instrumen</span>
+    </div>
+    <svg id="svg"></svg>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------------------------------------------------------------- gerbang: cookie sesi (Google) atau token
+  const LS_HOST = 'ingat_dash_host', LS_TOKEN = 'ingat_dash_token';
+  const gerbang = document.getElementById('gerbang'), app = document.getElementById('app');
+  const gHost = document.getElementById('gHost'), gToken = document.getElementById('gToken'), gGalat = document.getElementById('gGalat');
+
+  function bukaDashboard(host, token) {
+    gerbang.style.display = 'none';
+    app.classList.add('siap');
+    mulai(host.replace(/\/$/, ''), token);
+  }
+
+  // Google Auth mengarahkan browser ke halaman ini (server yang sama menyajikan /dashboard DAN /auth/*),
+  // jadi jalur relatif (origin saat ini) sudah benar — tidak perlu host/token tersimpan sama sekali.
+  document.getElementById('gGoogle').addEventListener('click', () => {
+    window.location.href = '/auth/google/mulai';
+  });
+
+  document.getElementById('gTotpMasuk').addEventListener('click', async () => {
+    const kode = document.getElementById('gTotp').value.trim();
+    if (!/^\d{6}$/.test(kode)) { gGalat.textContent = 'Kode harus 6 digit angka.'; return; }
+    try {
+      const r = await fetch('/auth/totp/masuk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kode }),
+      });
+      const d = await r.json();
+      if (!r.ok) { gGalat.textContent = d.galat || 'Gagal masuk.'; return; }
+      bukaDashboard(window.location.origin, null);
+    } catch (e) { gGalat.textContent = 'Tidak bisa menghubungi server.'; }
+  });
+
+  async function cobaSesiCookie() {
+    try {
+      const r = await fetch('/dashboard/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (r.ok) { bukaDashboard(window.location.origin, null); return true; }
+    } catch (e) { /* bukan di origin server yang sama, atau server tidak menjawab — lanjut ke gerbang token */ }
+    return false;
+  }
+
+  document.getElementById('gMasuk').addEventListener('click', async () => {
+    const host = gHost.value.trim(), token = gToken.value.trim();
+    if (!host || !token) { gGalat.textContent = 'Isi host dan token dulu.'; return; }
+    try {
+      const r = await fetch(`${host.replace(/\/$/, '')}/sehat`);
+      if (!r.ok) throw new Error();
+    } catch (e) { gGalat.textContent = 'Tidak bisa menghubungi host itu. Cek alamat/CORS.'; return; }
+    localStorage.setItem(LS_HOST, host); localStorage.setItem(LS_TOKEN, token);
+    bukaDashboard(host, token);
+  });
+
+  (async () => {
+    if (await cobaSesiCookie()) return;
+    const hostTersimpan = localStorage.getItem(LS_HOST), tokenTersimpan = localStorage.getItem(LS_TOKEN);
+    if (hostTersimpan && tokenTersimpan) {
+      gHost.value = hostTersimpan; gToken.value = tokenTersimpan;
+      bukaDashboard(hostTersimpan, tokenTersimpan);
+    }
+  })();
+
+  // ---------------------------------------------------------------- state
+  const WARNA_JENIS = { pelajaran: '#1F2A24', prosedur: '#5B6B5C', norma: '#8C7A3E', instrumen: '#9AA79B' };
+  let node = [], edge = [], idKeNode = new Map();
+
+  async function mulai(host, token) {
+    const status = document.getElementById('hStatus');
+    try {
+      const header = { 'Content-Type': 'application/json' };
+      if (token) header.Authorization = `Bearer ${token}`; // token null = andalkan cookie sesi (Google)
+      const r = await fetch(`${host}/dashboard/data`, { method: 'POST', headers: header, body: '{}' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      node = d.nodes.map((n, i) => ({ ...n, x: 300 + Math.cos(i) * 120 + Math.random() * 40, y: 220 + Math.sin(i) * 120 + Math.random() * 40, vx: 0, vy: 0 }));
+      edge = d.edges;
+      idKeNode = new Map(node.map((n) => [n.id, n]));
+      status.innerHTML = `<span class="titik" style="background:#0a7a2f"></span>${node.length} catatan · ${edge.length} tautan`;
+      isiRegistri();
+      gambarGraf();
+    } catch (e) {
+      status.innerHTML = `<span class="titik" style="background:#A23B2E"></span>gagal: ${e.message}`;
+    }
+  }
+
+  // ---------------------------------------------------------------- registri (sidebar)
+  function isiRegistri() {
+    const nav = document.getElementById('nav');
+    nav.innerHTML = '';
+    const urutanJenis = ['norma', 'pelajaran', 'prosedur', 'instrumen'];
+    const namaJenis = { norma: 'Norma', pelajaran: 'Pelajaran', prosedur: 'Prosedur', instrumen: 'Instrumen' };
+    for (const j of urutanJenis) {
+      const grup = node.filter((n) => n.jenis === j);
+      if (!grup.length) continue;
+      const g = document.createElement('div'); g.className = 'grup';
+      g.innerHTML = `<div class="grup-judul"><span class="dot" style="background:${WARNA_JENIS[j]}"></span>${namaJenis[j]} (${grup.length})</div>`;
+      for (const n of grup) {
+        const b = document.createElement('button'); b.className = 'baris'; b.dataset.id = n.id;
+        b.innerHTML = `${n.label}<span class="meta">${n.meta}</span>`;
+        b.addEventListener('click', () => pilihNode(n.id));
+        g.appendChild(b);
+      }
+      nav.appendChild(g);
+    }
+    if (!node.length) nav.innerHTML = '<div class="kosong">Belum ada pelajaran/prosedur/norma tersimpan.</div>';
+  }
+
+  function pilihNode(id) {
+    const n = idKeNode.get(id);
+    if (!n) return;
+    document.querySelectorAll('nav .baris').forEach((b) => b.classList.toggle('aktif', b.dataset.id === id));
+    const main = document.getElementById('main');
+    main.innerHTML = `<h2>${n.label}</h2><div class="stempel">${n.meta}</div><div class="isi"></div>`;
+    main.querySelector('.isi').textContent = n.detail || '';
+    soroti(id);
+  }
+
+  // ---------------------------------------------------------------- papan bukti (SVG + simulasi gaya)
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('svg');
+  let lineEl = new Map(), circleEl = new Map(), textEl = new Map();
+  let W = 600, H = 500;
+
+  function ukur() {
+    const kotak = document.getElementById('papan').getBoundingClientRect();
+    W = kotak.width; H = kotak.height;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  }
+  window.addEventListener('resize', ukur);
+
+  function gambarGraf() {
+    ukur();
+    svg.innerHTML = '';
+    lineEl.clear(); circleEl.clear(); textEl.clear();
+
+    for (const e of edge) {
+      const l = document.createElementNS(svgNS, 'line');
+      l.setAttribute('class', 'benang-garis ' + e.jenis);
+      svg.appendChild(l);
+      lineEl.set(e, l);
+    }
+    for (const n of node) {
+      const g = document.createElementNS(svgNS, 'g');
+      const r = n.jenis === 'norma' ? 7 : n.jenis === 'instrumen' ? 5 : 6;
+      const c = document.createElementNS(svgNS, 'circle');
+      c.setAttribute('r', r); c.setAttribute('fill', WARNA_JENIS[n.jenis]); c.setAttribute('class', 'simpul');
+      c.setAttribute('stroke', '#EEF0EA'); c.setAttribute('stroke-width', '1.5');
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('class', 'node-label'); t.setAttribute('dx', r + 4); t.setAttribute('dy', 4);
+      t.textContent = n.label.length > 28 ? n.label.slice(0, 27) + '…' : n.label;
+      g.appendChild(c); g.appendChild(t);
+      svg.appendChild(g);
+      circleEl.set(n.id, c); textEl.set(n.id, g);
+      pasangDrag(c, n);
+      c.addEventListener('click', (ev) => { ev.stopPropagation(); pilihNode(n.id); });
+    }
+    svg.addEventListener('click', () => soroti(null));
+    requestAnimationFrame(tik);
+  }
+
+  function soroti(id) {
+    if (!id) {
+      circleEl.forEach((c) => c.classList.remove('redup'));
+      textEl.forEach((t) => t.classList.remove('redup'));
+      lineEl.forEach((l) => l.classList.remove('redup'));
+      return;
+    }
+    const terhubung = new Set([id]);
+    for (const e of edge) if (e.a === id) terhubung.add(e.b); else if (e.b === id) terhubung.add(e.a);
+    circleEl.forEach((c, nid) => c.classList.toggle('redup', !terhubung.has(nid)));
+    textEl.forEach((t, nid) => t.classList.toggle('redup', !terhubung.has(nid)));
+    lineEl.forEach((l, e) => l.classList.toggle('redup', !(terhubung.has(e.a) && terhubung.has(e.b))));
+  }
+
+  // -- drag: node ditarik langsung ke posisi kursor, dilepas fisika lagi saat pointerup
+  function pasangDrag(el, n) {
+    let menarik = false;
+    el.addEventListener('pointerdown', (ev) => {
+      menarik = true; n.tertahan = true;
+      el.setPointerCapture(ev.pointerId);
+      svg.style.cursor = 'grabbing';
+    });
+    el.addEventListener('pointermove', (ev) => {
+      if (!menarik) return;
+      const titik = titikSvg(ev);
+      n.x = titik.x; n.y = titik.y; n.vx = 0; n.vy = 0;
+    });
+    const lepas = () => { menarik = false; n.tertahan = false; svg.style.cursor = 'grab'; };
+    el.addEventListener('pointerup', lepas);
+    el.addEventListener('pointercancel', lepas);
+  }
+  function titikSvg(ev) {
+    const kotak = svg.getBoundingClientRect();
+    return { x: (ev.clientX - kotak.left), y: (ev.clientY - kotak.top) };
+  }
+
+  // -- simulasi gaya sendiri: tolakan antar-simpul + pegas sepanjang tepi + gaya ke tengah + gesekan
+  const TOLAK = 1800, PEGAS = 0.02, JARAK_ISTIRAHAT = 70, GESEKAN = 0.85, KE_TENGAH = 0.01;
+  let energiRendahBerturut = 0;
+
+  function tik() {
+    let energi = 0;
+    for (let i = 0; i < node.length; i++) {
+      const a = node[i];
+      if (a.tertahan) continue;
+      let fx = (W / 2 - a.x) * KE_TENGAH, fy = (H / 2 - a.y) * KE_TENGAH;
+      for (let j = 0; j < node.length; j++) {
+        if (i === j) continue;
+        const b = node[j];
+        let dx = a.x - b.x, dy = a.y - b.y;
+        let d2 = dx * dx + dy * dy || 0.01;
+        const f = TOLAK / d2;
+        const d = Math.sqrt(d2);
+        fx += (dx / d) * f; fy += (dy / d) * f;
+      }
+      a.ax = fx; a.ay = fy;
+    }
+    for (const e of edge) {
+      const a = idKeNode.get(e.a), b = idKeNode.get(e.b);
+      if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      const f = PEGAS * (d - JARAK_ISTIRAHAT);
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      if (!a.tertahan) { a.ax += fx; a.ay += fy; }
+      if (!b.tertahan) { b.ax -= fx; b.ay -= fy; }
+    }
+    for (const n of node) {
+      if (n.tertahan) continue;
+      n.vx = (n.vx + (n.ax || 0) * 0.02) * GESEKAN;
+      n.vy = (n.vy + (n.ay || 0) * 0.02) * GESEKAN;
+      n.x = Math.max(10, Math.min(W - 10, n.x + n.vx));
+      n.y = Math.max(10, Math.min(H - 10, n.y + n.vy));
+      energi += n.vx * n.vx + n.vy * n.vy;
+    }
+    for (const n of node) {
+      const g = textEl.get(n.id), c = circleEl.get(n.id);
+      if (c) { c.setAttribute('cx', n.x); c.setAttribute('cy', n.y); }
+      if (g) g.setAttribute('transform', `translate(${n.x},${n.y})`);
+    }
+    for (const e of edge) {
+      const l = lineEl.get(e); const a = idKeNode.get(e.a), b = idKeNode.get(e.b);
+      if (l && a && b) { l.setAttribute('x1', a.x); l.setAttribute('y1', a.y); l.setAttribute('x2', b.x); l.setAttribute('y2', b.y); }
+    }
+    // hemat CPU: kalau sistem sudah "diam", perlambat ke ~4fps alih-alih berhenti total (drag tetap mulus)
+    energiRendahBerturut = energi < 0.05 ? energiRendahBerturut + 1 : 0;
+    const jeda = energiRendahBerturut > 60 ? 220 : 0;
+    if (jeda) setTimeout(() => requestAnimationFrame(tik), jeda); else requestAnimationFrame(tik);
+  }
+})();
+</script>
+</body>
+</html>

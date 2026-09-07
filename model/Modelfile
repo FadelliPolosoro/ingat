@@ -1,0 +1,4 @@
+# Modelfile Ollama untuk ingat-e5-base.
+# Bangun: bash model/bangun-gguf.sh  (menghasilkan multilingual-e5-base-f16.gguf di folder ini)
+# Lalu:   ollama create ingat-e5-base -f model/Modelfile
+FROM ./multilingual-e5-base-f16.gguf

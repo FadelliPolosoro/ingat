@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ingat — opsi</title>
+<style>
+  body{font:14px/1.5 -apple-system,system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#1a1a1a}
+  h1{font-size:18px} h2{font-size:15px;margin-top:28px;border-top:1px solid #ddd;padding-top:16px}
+  label{display:block;margin:12px 0 4px;font-weight:600}
+  input,select{width:100%;padding:6px 8px;box-sizing:border-box;font:inherit;border:1px solid #ccc;border-radius:6px}
+  .catatan{color:#666;font-size:12px;margin-top:2px}
+  .situs{border:1px solid #e2e2e2;border-radius:8px;padding:10px;margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .situs code{background:#f3f3f3;padding:2px 5px;border-radius:4px;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  button{padding:6px 12px;border-radius:6px;border:1px solid #ccc;background:#fafafa;cursor:pointer}
+  button.utama{background:#111;color:#fff;border-color:#111}
+  .status{margin-top:6px;font-size:12px}
+  .ok{color:#0a7a2f} .warn{color:#a15c00}
+</style>
+</head>
+<body>
+  <h1>ingat — tangkap percakapan browser</h1>
+  <p class="catatan">Ekstensi ini hanya mengirim data ke server <b>ingat lokalmu sendiri</b> — tidak ke server pihak ketiga mana pun. Lihat README.md di folder ini sebelum memakai.</p>
+
+  <h2>Sambungan ke server ingat</h2>
+  <label for="host">Host API (biasanya lewat Caddy, bukan langsung ke VPS)</label>
+  <input id="host" placeholder="https://memori.contoh-domain.id">
+  <label for="token">Token (INGAT_TOKEN)</label>
+  <input id="token" type="password" placeholder="tempel token dari .env server">
+  <label for="lingkup">Lingkup default</label>
+  <input id="lingkup" placeholder="peran:asisten-ai">
+  <div class="catatan">Format: <code>global</code>, <code>proyek:&lt;nama&gt;</code>, atau <code>peran:&lt;nama&gt;</code>.</div>
+  <label><input type="checkbox" id="aktif" style="width:auto"> Tangkap aktif</label>
+  <label><input type="checkbox" id="autoMulai" style="width:auto"> Suntik otomatis saat percakapan BARU (kotak kosong, 0 pesan) — mati sendiri untuk percakapan lama</label>
+  <button class="utama" id="simpan">Simpan</button>
+  <span id="statusSimpan" class="status"></span>
+
+  <h2>Selektor per situs</h2>
+  <p class="catatan">ChatGPT sudah diisi pola umum (verifikasi sendiri — bisa berubah kapan saja). Situs lain kosong sengaja:
+  klik <b>Pilih elemen</b>, lalu di tab situs itu, klik satu balon pesanmu, lalu klik satu balon jawaban AI.</p>
+  <div id="daftarSitus"></div>
+
+  <h2>Antrean & diagnostik</h2>
+  <div id="diagnostik" class="catatan"></div>
+  <button id="segarkan">Segarkan status</button>
+
+  <script src="options.js"></script>
+</body>
+</html>

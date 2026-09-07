@@ -1,0 +1,85 @@
+{
+  "_catatan": "Salin ke konfigurasi.json. Kunci API TIDAK di sini — hanya di .env. base_url/model preset berasal dari informasi umum per pertengahan 2026 dan dapat berubah; verifikasi di dokumentasi tiap penyedia sebelum produksi.",
+  "dir_data": "/data",
+  "vault": "/vault",
+  "embedding": {
+    "jenis": "lokal",
+    "_alternatif_http": {
+      "jenis": "http",
+      "base_url": "https://api.openai.com/v1",
+      "model": "text-embedding-3-small",
+      "env": "EMBEDDING_API_KEY"
+    },
+    "_catatan": "Mengganti penyemat setelah data terisi = wajib reindex (vektor lama tidak kompatibel).",
+    "_alternatif_ollama": {
+      "jenis": "ollama",
+      "host": "http://127.0.0.1:11434",
+      "model": "ingat-e5-base",
+      "dim": 768,
+      "prefiks": true,
+      "_catatan": "K5/K8/K9 — model dibangun sendiri: bash model/bangun-gguf.sh && ollama create ingat-e5-base -f model/Modelfile"
+    }
+  },
+  "gateway": {
+    "anggaran_tarik": 600,
+    "maks_item": 5,
+    "anggaran_peta": 300,
+    "anggaran_aturan": 1500,
+    "rasio_maks": 0.15
+  },
+  "gate": {
+    "_catatan": "Tier -> penyedia yang boleh menerima data tier itu (Bab 9, spek-ai-hybrid.md). S selalu kosong apa pun isinya.",
+    "P": [
+      "claude",
+      "openai",
+      "perplexity",
+      "deepseek",
+      "kimi",
+      "grok",
+      "glm",
+      "nemotron",
+      "lokal"
+    ],
+    "I": [
+      "lokal"
+    ],
+    "S": []
+  },
+  "penyedia": {
+    "claude": {
+      "aktif": false
+    },
+    "gemini": {
+      "aktif": false
+    },
+    "deepseek": {
+      "aktif": false
+    },
+    "kimi": {
+      "aktif": false
+    },
+    "lokal": {
+      "aktif": false,
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "qwen2.5:7b"
+    },
+    "_catatan": "aktif:true wajib per penyedia, DAN kunci API-nya harus ada di environment (.env) — dua syarat, bukan salah satu. Dipakai HANYA untuk sintesis pelajaran saat konsolidasi (K6/7.3); v0 default semuanya false (heuristik, tanpa LLM). Gate Bab 9 tetap menyaring tier per gate.P/gate.I terlepas dari ini."
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8765,
+    "proxy_tepercaya": false,
+    "batas_body": 1048576,
+    "timeout_detik": 30,
+    "laju_per_menit": 120
+  },
+  "konsolidasi": {
+    "hari_dingin": 30,
+    "_catatan_hari_dingin": "R8: episode didinginkan hanya bila pelajaran induk disetujui manusia atau usia > hari_dingin"
+  },
+  "auth": {
+    "allowed_emails": [],
+    "redirect_uri": "",
+    "_catatan": "Isi allowed_emails dengan email Google yang boleh masuk dashboard (wajib, tanpa ini SIAPA PUN dengan akun Google ditolak). redirect_uri HARUS persis sama dengan yang didaftarkan di Google Cloud Console: https://<domain>/auth/google/callback"
+  }
+}

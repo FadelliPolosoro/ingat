@@ -1,0 +1,39 @@
+# ingat — sistem memori agent · dibuat oleh Fadelli Polosoro
+# Jalankan: cp .env.contoh .env && cp konfigurasi.contoh.json konfigurasi.json && docker compose up -d --build
+services:
+  ingat:
+    build: .
+    container_name: ingat
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./konfigurasi.json:/app/konfigurasi.json:ro
+      - ingat-data:/data
+      - ${INGAT_VAULT_HOST:-./vault}:/vault      # vault Obsidian (sinkron via Obsidian Sync / LiveSync / git)
+    ports:
+      - "127.0.0.1:8765:8765"                    # hanya loopback; publik lewat Caddy
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  ingat-jadwal:
+    build: .
+    container_name: ingat-jadwal
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Jakarta
+    volumes:
+      - ./konfigurasi.json:/app/konfigurasi.json:ro
+      - ingat-data:/data
+      - ${INGAT_VAULT_HOST:-./vault}:/vault
+    command: ["python3", "-m", "ingat", "jadwal", "--jam", "02:00", "--ambang", "50"]
+    depends_on: [ingat]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+volumes:
+  ingat-data:

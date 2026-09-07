@@ -1,0 +1,10 @@
+{
+  "uji": "U1",
+  "nama": "Titik buta Hostinger",
+  "lingkup": "proyek:fp-dashboard",
+  "situasi": "VPS_getProjectListV1 mengembalikan daftar kosong; agent hendak melaporkan bahwa tidak ada beban kerja apa pun di VPS.",
+  "harapan": ["pl-0001"],
+  "tidak_boleh": [],
+  "lingkup_negatif": "proyek:garnivo",
+  "catatan": "Uji lingkup negatif: query yang sama dengan lingkup proyek:garnivo TIDAK boleh mengembalikan pl-0001 (P9), karena pelajaran masih terkunci di lingkup asalnya."
+}

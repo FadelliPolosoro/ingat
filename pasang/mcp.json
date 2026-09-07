@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ingat": {
+      "command": "python3",
+      "args": ["-m", "ingat", "--konfig", "~/.ingat/konfigurasi.json", "mcp"]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><style>
+  body{font:13px/1.5 -apple-system,system-ui,sans-serif;width:260px;padding:10px}
+  h1{font-size:14px;margin:0 0 8px}
+  .baris{display:flex;justify-content:space-between;margin:4px 0}
+  button{width:100%;margin-top:8px;padding:6px;border-radius:6px;border:1px solid #ccc;background:#fafafa;cursor:pointer}
+  .titik{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+</style></head>
+<body>
+  <h1><span id="titik" class="titik" style="background:#999"></span>ingat</h1>
+  <div class="baris"><span>Situs ini</span><span id="situsStatus">—</span></div>
+  <div class="baris"><span>Terkirim</span><span id="jumlah">0</span></div>
+  <div class="baris"><span>Tertunda</span><span id="tertunda">0</span></div>
+  <div id="hintRelevansi" style="margin-top:6px;font-size:11px;color:#0a7a2f;display:none">🟢 Ada memori relevan untuk yang sedang kamu ketik</div>
+  <button id="suntik" style="margin-top:6px;background:#111;color:#fff;border-color:#111">🧠 Suntik memori</button>
+  <button id="suntikLagi" style="margin-top:4px;display:none">➕ Suntik lagi (cicilan)</button>
+  <div id="suntikStatus" style="margin-top:4px;font-size:11px;color:#666"></div>
+  <div style="margin-top:2px;font-size:10px;color:#999">Hanya menyisipkan teks ke kotak ketik — tidak pernah mengirim otomatis.</div>
+  <button id="opsi">Buka opsi</button>
+  <script src="popup.js"></script>
+</body></html>

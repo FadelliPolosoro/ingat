@@ -1,0 +1,11 @@
+.env
+data/
+vault/
+__pycache__/
+*.pyc
+.git/
+port/
+model/hf/
+model/llama.cpp/
+model/*.gguf
+vault-contoh/

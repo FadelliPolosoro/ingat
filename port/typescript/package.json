@@ -1,0 +1,20 @@
+{
+  "name": "ingat",
+  "version": "0.0.1",
+  "description": "Sistem memori agent AI yang bisa diperiksa manusia — implementasi rujukan TypeScript di atas kontrak SQLite + frontmatter + MCP.",
+  "license": "Apache-2.0",
+  "author": "Fadelli Polosoro",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13 <23"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test \"uji/**/*.test.ts\"",
+    "build": "tsc -p tsconfig.json",
+    "cek-lisensi": "node --experimental-strip-types skrip/cek-lisensi.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
