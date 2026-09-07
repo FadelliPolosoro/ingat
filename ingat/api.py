@@ -83,6 +83,9 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
     class Handler(BaseHTTPRequestHandler):
         server_version = f"ingat/{__version__}"
         timeout = int(konfig_server.get("timeout_detik", 30))
+        #: Sudahkah badan permintaan dibaca/dikuras? Dipakai `_kuras_badan` agar tiap cabang
+        #: jawaban — termasuk cabang galat yang keluar lebih awal — menutup soket dengan tertib.
+        _badan_dibaca = False
 
         def log_message(self, fmt, *args):
             # /mcp/<token>: token ada literal di path — REDAKSI sebelum masuk log (K10, prinsip yang sama).
@@ -97,7 +100,34 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                     return xff.split(",")[-1].strip()  # entri TERAKHIR = yang ditulis proxy kita
             return self.client_address[0]
 
+        def _kuras_badan(self):
+            """Baca-buang badan permintaan yang belum sempat dibaca, sebelum menjawab.
+
+            Menutup soket sementara masih ada byte menunggu di buffer terima membuat Windows
+            mengirim RST alih-alih FIN; klien lalu kena WSAECONNABORTED (10053) saat membaca
+            respons yang sebenarnya SUDAH lengkap terkirim. Terukur pada jalur 401: 6 dari 300
+            POST berbadan, sementara jalur 200 yang badannya dibaca bersih 0 dari 300.
+
+            Ini bukan kosmetik uji — klien nyata yang ditolak 401/429 kehilangan pesan galatnya
+            dan hanya melihat koneksi putus.
+
+            Badan raksasa (penolakan 413) tidak dikuras seluruhnya; koneksi ditutup terus terang
+            supaya penolakan tidak berubah jadi jalur membaca sebanyak apa pun yang dikirim.
+            """
+            if self._badan_dibaca:
+                return
+            self._badan_dibaca = True
+            sisa = min(int(self.headers.get("Content-Length") or 0), batas_body)
+            while sisa > 0:
+                potong = self.rfile.read(min(sisa, 65536))
+                if not potong:
+                    break
+                sisa -= len(potong)
+            if int(self.headers.get("Content-Length") or 0) > batas_body:
+                self.close_connection = True
+
         def _kirim(self, kode: int, data):
+            self._kuras_badan()
             badan = json.dumps(data, ensure_ascii=False).encode()
             self.send_response(kode)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -150,7 +180,9 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
             if n > batas_body:
                 raise ValueError(f"body melebihi {batas_body} byte")
             if n == 0:
+                self._badan_dibaca = True
                 return {}
+            self._badan_dibaca = True
             mentah = self.rfile.read(n)
             data = json.loads(mentah.decode("utf-8"))
             if not isinstance(data, dict):
@@ -279,6 +311,7 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 n = int(self.headers.get("Content-Length", "0") or 0)
                 if n > batas_body:
                     return self._kirim(413, {"galat": "badan terlalu besar"})
+                self._badan_dibaca = True
                 badan = self.rfile.read(n) if n else b""
             try:
                 status, hdr, isi = _mcp_http(app, metode, badan, self.headers.get("Mcp-Session-Id"))

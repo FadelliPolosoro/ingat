@@ -151,5 +151,63 @@ class ServerMcp(unittest.TestCase):
             self.assertEqual(e.code, 400)
 
 
+class KurasBadan(unittest.TestCase):
+    """Badan permintaan wajib dikuras sebelum jawaban galat — akar flaky WinError 10053.
+
+    Cabang galat yang keluar lebih awal (401/429/413) dulu menjawab TANPA membaca badan.
+    Soket lalu ditutup sementara byte masih menunggu di buffer terima; Windows membalas RST
+    alih-alih FIN, dan klien kehilangan respons galat yang sebenarnya sudah lengkap terkirim
+    (terukur: 6 dari 300 POST ke jalur 401; jalur 200 bersih 0 dari 300).
+
+    Diuji langsung pada mekanismenya, bukan lewat balapan jaringan: uji yang bergantung pada
+    balapan hanya gagal ~1 dari 10 kali dan tidak layak jadi penjaga regresi.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="ingat-kuras-")
+        k = json.loads(json.dumps(KONFIG_DEFAULT))
+        k["dir_data"] = os.path.join(self.dir, "data")
+        k["vault"] = os.path.join(self.dir, "vault")
+        self.app = Aplikasi(k)
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _handler(self, panjang: int, sudah: bool = False, batas: int = 1_048_576):
+        H = buat_handler(self.app, "token-uji-yang-panjangnya-cukup-24", {"batas_body": batas})
+        h = H.__new__(H)  # tanpa __init__: tidak perlu soket sungguhan
+        h.headers = {"Content-Length": str(panjang)}
+        h.rfile = io.BytesIO(b"x" * panjang)
+        h._badan_dibaca = sudah
+        h.close_connection = False
+        return h
+
+    def test_badan_dikuras_habis(self):
+        h = self._handler(5000)
+        h._kuras_badan()
+        self.assertEqual(h.rfile.read(), b"", "tidak ada sisa di buffer terima")
+        self.assertTrue(h._badan_dibaca)
+        self.assertFalse(h.close_connection, "penutupan tertib, tidak perlu dipaksa")
+
+    def test_badan_yang_sudah_dibaca_tidak_dibaca_dua_kali(self):
+        h = self._handler(10, sudah=True)
+        h._kuras_badan()
+        self.assertEqual(len(h.rfile.read()), 10, "buffer tidak disentuh")
+
+    def test_badan_raksasa_tidak_dikuras_seluruhnya_dan_koneksi_ditutup(self):
+        """Penolakan 413 tidak boleh berubah jadi jalur membaca sebanyak apa pun yang dikirim."""
+        h = self._handler(1000, batas=100)
+        h._kuras_badan()
+        self.assertEqual(len(h.rfile.read()), 900, "hanya sampai batas yang dikuras")
+        self.assertTrue(h.close_connection, "sisa tidak dikuras → tutup terus terang")
+
+    def test_tanpa_content_length_aman(self):
+        h = self._handler(0)
+        h.headers = {}
+        h._kuras_badan()
+        self.assertTrue(h._badan_dibaca)
+        self.assertFalse(h.close_connection)
+
+
 if __name__ == "__main__":
     unittest.main()
