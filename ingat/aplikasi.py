@@ -44,7 +44,10 @@ def muat_konfig(path: str | None = None) -> dict:
 
 
 class Aplikasi:
-    def __init__(self, konfig: dict):
+    def __init__(self, konfig: dict, bangun_ulang_vektor: bool = False):
+        """`bangun_ulang_vektor`: satu-satunya jalan sah keluar dari IdentitasEmbedderTidakCocok
+        (K8/K9) — ganti model embedding = semat ulang semua item. Dipakai perintah
+        `ingat bangun-ulang-vektor`; jangan dinyalakan sebagai kebiasaan."""
         self.konfig = konfig
         e = konfig.get("embedding", {})
         if e.get("jenis") == "http":
@@ -56,7 +59,7 @@ class Aplikasi:
         else:
             self.penyemat = PenyematLokal(int(e.get("dim", 512)))
         os.makedirs(konfig["dir_data"], exist_ok=True)
-        self.store = Store(konfig["dir_data"], self.penyemat)
+        self.store = Store(konfig["dir_data"], self.penyemat, bangun_ulang_vektor=bangun_ulang_vektor)
         self.vault = Vault(konfig["vault"]) if konfig.get("vault") else None
         self.gate = Gate(konfig.get("gate"))
         self.penyedia = mod_penyedia.bangun_penyedia(konfig.get("penyedia"))

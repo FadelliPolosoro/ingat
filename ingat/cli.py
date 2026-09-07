@@ -25,6 +25,8 @@ def utama(argv: list[str] | None = None) -> int:
     k = sub.add_parser("konsolidasi", help="jalankan job konsolidasi")
     k.add_argument("--cepat", action="store_true", help="jalur cepat: hanya episode bobot >= 3")
     sub.add_parser("sinkron", help="sinkron vault Obsidian -> store")
+    sub.add_parser("bangun-ulang-vektor", help="semat ulang semua item dengan penyemat di konfigurasi sekarang "
+                                               "(satu-satunya jalan keluar dari IdentitasEmbedderTidakCocok, K8/K9)")
     c = sub.add_parser("catat", help="catat episode dari CLI")
     c.add_argument("--isi", required=True)
     c.add_argument("--ringkas", required=True)
@@ -106,8 +108,15 @@ def utama(argv: list[str] | None = None) -> int:
         print(json.dumps(pasang(tulis=a.tulis), ensure_ascii=False, indent=2))
         return 0
 
-    app = Aplikasi(muat_konfig(a.konfig))
-    if a.perintah == "serve":
+    # Bendera dipasang SEBELUM Store dibuka: Aplikasi membuka Store di __init__, jadi tanpa ini
+    # perintah pemulihan justru mati oleh galat yang hendak dipulihkannya.
+    app = Aplikasi(muat_konfig(a.konfig), bangun_ulang_vektor=(a.perintah == "bangun-ulang-vektor"))
+    if a.perintah == "bangun-ulang-vektor":
+        n = {j: len(f()) for j, f in (("episode", app.store.episode_semua), ("pelajaran", app.store.pelajaran_semua),
+                                      ("prosedur", app.store.prosedur_semua), ("norma", app.store.norma_semua))}
+        ident = [dict(r) for r in app.store.db.execute("SELECT koleksi, model, dimensi FROM identitas_embedder")]
+        print(json.dumps({"disemat_ulang": n, "identitas_sekarang": ident}, ensure_ascii=False, indent=2))
+    elif a.perintah == "serve":
         from .api import jalankan_server
         jalankan_server(app)
     elif a.perintah == "mcp":

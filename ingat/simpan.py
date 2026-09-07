@@ -285,13 +285,20 @@ class Store:
         obj._vektor_pemicu = vek.get("pemicu", [])  # type: ignore[attr-defined]
         return obj
 
-    def _simpan_vektor(self, jenis: str, obj):
-        for koleksi, teks in _koleksi_teks(jenis, obj).items():
-            v = self.penyemat.semat(teks)
+    def _hitung_vektor(self, jenis: str, obj) -> list[tuple[str, list[float]]]:
+        """Panggil penyemat TANPA menyentuh basis data.
+
+        Dipisah dari penulisan supaya pemanggil bisa menyematkan lebih dulu: penyemat adalah
+        satu-satunya langkah yang memanggil dunia luar (Ollama) dan yang paling sering gagal.
+        """
+        return [(koleksi, self.penyemat.semat(teks)) for koleksi, teks in _koleksi_teks(jenis, obj).items()]
+
+    def _simpan_vektor(self, jenis: str, obj, siap: list[tuple[str, list[float]]] | None = None):
+        for koleksi, v in (siap if siap is not None else self._hitung_vektor(jenis, obj)):
             self.db.execute("INSERT OR REPLACE INTO vektor(item_id,jenis,koleksi,dimensi,vektor) VALUES(?,?,?,?,?)",
                             (obj.id, jenis, koleksi, len(v), ke_blob(v)))
 
-    def _upsert(self, jenis: str, obj, semat: bool = True):
+    def _upsert(self, jenis: str, obj, semat: bool = True, vektor_siap=None):
         d = self._ke_baris(jenis, obj)
         if jenis == "prosedur":  # kontrak v2: tingkat_berhasil = cache, bukan sumber kebenaran
             total = int(getattr(obj, "eksekusi_total", 0) or 0)
@@ -299,10 +306,18 @@ class Store:
         kolom = ", ".join(d.keys())
         tanda = ", ".join("?" for _ in d)
         with self._kunci:
-            self.db.execute(f"INSERT OR REPLACE INTO {jenis} ({kolom}) VALUES ({tanda})", list(d.values()))
-            if semat:
-                self._simpan_vektor(jenis, obj)
-            self.db.commit()
+            try:
+                self.db.execute(f"INSERT OR REPLACE INTO {jenis} ({kolom}) VALUES ({tanda})", list(d.values()))
+                if semat:
+                    self._simpan_vektor(jenis, obj, vektor_siap)
+                self.db.commit()
+            except BaseException:
+                # Tanpa rollback, INSERT yang gagal menggantung di transaksi yang masih terbuka
+                # dan akan ikut ter-commit oleh penulis BERIKUTNYA (mis. catat_metrik) — baris
+                # muncul di basis data seolah-olah berhasil. Terlihat hanya di proses berumur
+                # panjang; di CLI ia tersembunyi karena proses langsung mati.
+                self.db.rollback()
+                raise
 
     def catat_metrik(self, nama: str, nilai: float, **konteks):
         with self._kunci:
@@ -323,6 +338,13 @@ class Store:
         with gzip.open(os.path.join(self.dir_data, ref), "rt", encoding="utf-8") as f:
             return json.load(f)
 
+    def _hapus_dingin(self, ref: str):
+        """Gulung balik blob dingin yang sudah telanjur ditulis."""
+        try:
+            os.remove(os.path.join(self.dir_data, ref))
+        except OSError:
+            pass
+
     def tambah_episode(self, isi: str, **meta) -> skema.Episode:
         # K10: semua episode tersimpan verbatim — termasuk tier S — kredensial diredaksi SEBELUM tulis.
         # Ini satu-satunya jalur tulis episode (CLI, API, MCP semua lewat sini).
@@ -334,8 +356,22 @@ class Store:
         meta["tier"] = "S" if (tier_naik == "S" or meta.get("tier") == "S") else meta.get("tier", "I")
         id_ = meta.pop("id", None) or skema.id_episode()
         ep = skema.Episode(id=id_, waktu=meta.pop("waktu", None) or skema.sekarang(), **meta)
+        # Urutan ditentukan kontrak, bukan kemudahan. Baris episode yang sudah ter-commit WAJIB
+        # punya blob verbatim di ujung `isi_ref` (K10) — jadi blob harus ada lebih dulu; baris
+        # tanpa blob berarti bukti hilang. Sebaliknya blob tanpa baris hanyalah sampah yang tidak
+        # dirujuk siapa pun, dan itu yang harus digulung balik.
+        #
+        # Karena itu: semat DULU (satu-satunya langkah yang memanggil dunia luar dan paling sering
+        # gagal — Ollama mati = gagal di sini, sebelum ada apa pun ditulis), baru tulis blob, baru
+        # baris. Kalau penulisan baris tetap gagal, blob dihapus supaya tidak jadi yatim.
+        vek = self._hitung_vektor("episode", ep)
         ep.isi_ref = self.simpan_dingin(ep.id, {"id": ep.id, "waktu": ep.waktu, "isi": r_isi.teks, "meta": skema.ke_dict(ep)})
-        self._upsert("episode", ep)  # vektor dari ringkas saja; isi verbatim hidup di penyimpanan dingin
+        try:
+            # vektor dari ringkas saja; isi verbatim hidup di penyimpanan dingin
+            self._upsert("episode", ep, vektor_siap=vek)
+        except BaseException:
+            self._hapus_dingin(ep.isi_ref)
+            raise
         return ep
 
     def episode(self, id_: str) -> skema.Episode | None:
