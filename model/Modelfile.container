@@ -1,0 +1,11 @@
+# Modelfile Ollama untuk ingat-e5-base — varian untuk container `ingat-ollama`.
+#
+# Bedanya dengan ./Modelfile hanya jalur FROM: di dalam container, .gguf disalin ke /tmp lebih dulu
+# (docker cp), jadi jalur relatif "./" tidak berlaku. Dua berkas dipisah dengan sengaja supaya
+# tidak ada yang mengedit satu lalu heran kenapa yang lain patah.
+#
+# Pakai:
+#   docker cp model/multilingual-e5-base-f16.gguf ingat-ollama:/tmp/
+#   docker cp model/Modelfile.container            ingat-ollama:/tmp/Modelfile
+#   docker compose exec ollama ollama create ingat-e5-base -f /tmp/Modelfile
+FROM /tmp/multilingual-e5-base-f16.gguf

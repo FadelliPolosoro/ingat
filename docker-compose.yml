@@ -41,5 +41,24 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
 
+  # Penyemat semantik — OPT-IN lewat profile, supaya pemasangan biasa tidak dipaksa menarik
+  # image ~1,5 GB. Jalankan: docker compose --profile semantik up -d
+  #
+  # Kenapa container dan bukan Ollama di host: `host.docker.internal` TIDAK resolve dari container
+  # di Docker Linux tanpa extra_hosts, dan sekadar menambahkan extra_hosts pun belum cukup karena
+  # Ollama di host hanya mendengar 127.0.0.1 — sambungannya akan ditolak. Menyuruhnya mendengar
+  # 0.0.0.0 berarti memaparkan Ollama ke internet pada VPS tanpa firewall. Sebagai service di
+  # jaringan compose, ia dicapai lewat DNS Docker (`http://ollama:11434`), tanpa port ke host
+  # sama sekali. Ini juga membuat konfigurasinya sama di Linux, macOS, dan Windows.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ingat-ollama
+    profiles: [semantik]
+    restart: unless-stopped
+    volumes:
+      - ollama-model:/root/.ollama
+    # Sengaja TANPA blok `ports`: hanya container di jaringan ini yang boleh menjangkaunya.
+
 volumes:
   ingat-data:
+  ollama-model:
