@@ -1,0 +1,32 @@
+# Akhir baris dipaku, bukan diserahkan ke setelan mesin masing-masing.
+#
+# Kenapa: repo ini dikerjakan di Windows (core.autocrlf=true di mesin pengembang) tetapi
+# di-deploy ke Linux. Tanpa berkas ini, clone segar di Windows mengubah *.sh menjadi CRLF,
+# dan begitu skrip itu sampai ke VPS bash menolaknya dengan
+#   $'\r': command not found
+# Kegagalannya membingungkan karena berkasnya "terlihat benar" di editor. Yang paling
+# berbahaya: instal-vps.sh dan model/bangun-gguf.sh — keduanya HANYA dijalankan di Linux.
+
+# Bawaan: normalkan teks di repo, biarkan checkout mengikuti platform.
+* text=auto
+
+# Wajib LF di working copy mana pun — dieksekusi atau dibaca oleh Linux.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+Caddyfile*      text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+.env.contoh     text eol=lf
+
+# Kontrak & data yang dibaca lintas port/OS — jangan ada CR yang menyelinap.
+*.sql           text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.py            text eol=lf
+*.ts            text eol=lf
+
+# Biner: jangan disentuh sama sekali.
+*.gguf          binary
+*.gz            binary
+*.png           binary
+*.zip           binary
