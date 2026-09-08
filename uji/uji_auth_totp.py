@@ -4,9 +4,16 @@ bukan cuma mempercayai implementasi sendiri."""
 from __future__ import annotations
 
 import base64
+import contextlib
+import io
+import os
+import re
+import shutil
+import tempfile
 import unittest
 
 from ingat.auth_totp import _hotp, buat_rahasia, kode_sekarang, otpauth_url, verifikasi_kode
+from ingat.cli import utama
 
 # RFC 6238 Lampiran B: seed ASCII "12345678901234567890", HMAC-SHA1, langkah 30 detik, 8 digit.
 RAHASIA_RFC = base64.b32encode(b"12345678901234567890").decode().rstrip("=")
@@ -69,6 +76,60 @@ class Kode(unittest.TestCase):
         self.assertIn("issuer=ingat", u)
         self.assertIn("digits=6", u)
         self.assertIn("period=30", u)
+
+
+class PerintahTotpAtur(unittest.TestCase):
+    """Jalur CLI `totp-atur --tulis-env` — sebelumnya tidak diuji sama sekali.
+
+    Akibatnya `NameError: name 'os' is not defined` terkirim ke pengguna: cli.py memakai
+    os.path.exists tetapi tidak pernah mengimpor os, dan satu-satunya pemakaian `os.` di berkas
+    itu ada di cabang ini. Uji algoritma TOTP di atas tidak pernah menyentuhnya. Ketahuan hanya
+    saat perintah ini benar-benar dijalankan di VPS — padahal instal-vps.sh menyuruh
+    menjalankannya sebagai langkah pemasangan.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="ingat-totp-cli-")
+        self.semula = os.getcwd()
+        os.chdir(self.dir)          # perintahnya menulis ke ".env" di direktori kerja
+
+    def tearDown(self):
+        os.chdir(self.semula)
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _jalankan(self):
+        keluaran = io.StringIO()
+        with contextlib.redirect_stdout(keluaran):
+            kode = utama(["totp-atur", "--tulis-env"])
+        return kode, keluaran.getvalue()
+
+    def test_menulis_rahasia_ke_env_yang_sudah_ada(self):
+        with open(".env", "w", encoding="utf-8") as f:
+            f.write("INGAT_TOKEN=abc\n")
+        kode, keluaran = self._jalankan()
+        self.assertEqual(kode, 0, f"perintah harus selesai bersih, dapat kode {kode}")
+        isi = open(".env", encoding="utf-8").read()
+        cocok = re.search(r"^INGAT_TOTP_RAHASIA=([A-Z2-7]{16,})$", isi, re.M)
+        self.assertIsNotNone(cocok, f".env harus memuat rahasia base32, isinya:\n{isi}")
+        self.assertIn("INGAT_TOKEN=abc", isi, "baris lain di .env tidak boleh hilang")
+        self.assertIn(cocok.group(1), keluaran, "rahasia yang ditulis harus sama dengan yang ditampilkan")
+
+    def test_baris_yang_sudah_ada_diganti_bukan_digandakan(self):
+        with open(".env", "w", encoding="utf-8") as f:
+            f.write("INGAT_TOTP_RAHASIA=RAHASIALAMAAAAAAA\nINGAT_TOKEN=abc\n")
+        self._jalankan()
+        isi = open(".env", encoding="utf-8").read()
+        self.assertEqual(isi.count("INGAT_TOTP_RAHASIA="), 1,
+                         f"harus tepat satu baris rahasia, isinya:\n{isi}")
+        self.assertNotIn("RAHASIALAMAAAAAAA", isi, "rahasia lama harus tergantikan")
+
+    def test_tanpa_env_tidak_meledak_dan_menuntun_manual(self):
+        """Dijalankan di direktori tanpa .env (mis. lupa cd) — harus memandu, bukan melempar."""
+        kode, keluaran = self._jalankan()
+        self.assertEqual(kode, 0)
+        self.assertIn("INGAT_TOTP_RAHASIA=", keluaran,
+                      "harus menampilkan baris yang bisa ditempel manual")
+        self.assertFalse(os.path.exists(".env"), "tidak boleh membuat .env baru diam-diam")
 
 
 if __name__ == "__main__":
