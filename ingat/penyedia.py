@@ -108,6 +108,12 @@ def bangun_penyedia(konfig: dict | None) -> dict:
     """
     hasil: dict = {}
     for pid, k in (konfig or {}).items():
+        # Kunci ber-awalan `_` adalah catatan untuk manusia, bukan penyedia — konvensi yang dipakai
+        # di seluruh konfigurasi (`_catatan`, `_alternatif_*`). `konfigurasi.contoh.json` SELALU
+        # mengirim `"_catatan"` di blok ini, jadi tanpa penyaringan ini setiap orang yang menyalin
+        # contoh ke konfigurasi.json langsung kena AttributeError ('str' has no attribute 'get').
+        if pid.startswith("_") or not isinstance(k, dict):
+            continue
         if not k.get("aktif", False):
             continue
         preset = dict(PRESET.get(pid, {}))

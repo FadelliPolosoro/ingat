@@ -29,6 +29,12 @@ services:
       - ingat-data:/data
       - ${INGAT_VAULT_HOST:-./vault}:/vault
     command: ["python3", "-m", "ingat", "jadwal", "--jam", "02:00", "--ambang", "50"]
+    # HEALTHCHECK di Dockerfile memeriksa http://127.0.0.1:8765/sehat — benar untuk `ingat`, salah
+    # untuk penjadwal yang tidak melayani HTTP sama sekali. Tanpa baris ini container ini selamanya
+    # berstatus `unhealthy` meski konsolidasinya jalan normal, dan status palsu itu menutupi
+    # kegagalan yang sungguhan nanti.
+    healthcheck:
+      disable: true
     depends_on: [ingat]
     read_only: true
     tmpfs: [/tmp]

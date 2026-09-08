@@ -5,42 +5,47 @@
 #     pun, langsung bisa dipakai (lihat pasang/README-google-auth.md).
 # Google OAuth WAJIB HTTPS untuk redirect_uri (kecuali localhost) — karena itu Caddy di sini penting,
 # bukan sekadar mempercantik alamat.
+#
+# CATATAN SINTAKS (pernah salah di berkas ini): Caddy TIDAK menerima blok satu-baris. Menulis
+# `request_body { max_size 2MB }` dalam satu baris ditolak dengan
+# "Unexpected next token after '{' on same line". Kurung buka harus di ujung baris, kurung tutup
+# berdiri sendiri — seperti di bawah. Selalu `caddy validate --config /etc/caddy/Caddyfile` dulu.
+#
+# Blok di bawah SUDAH mencakup penanganan /mcp (Custom Connector claude.ai). Jangan menambahkan
+# blok kedua dengan alamat yang sama — Caddy menolak definisi situs yang ambigu.
+#
+# PENTING soal /mcp: bila kamu memakai jalur URL-rahasia (/mcp/<token>), token ada literal di path.
+# `log_message` di ingat/api.py sudah meredaksinya (K19), tapi Caddy TIDAK TAHU itu — karena itu
+# `log_skip` di bawah mematikan access log khusus untuk /mcp, supaya token tidak pernah mendarat
+# di disk Caddy.
 memori.contoh-domain.id {
-    encode zstd gzip
-    # Batasi ukuran body di sisi proxy juga
-    request_body {
-        max_size 2MB
-    }
-    reverse_proxy 127.0.0.1:8765 {
-        header_up X-Forwarded-For {remote_host}
-        transport http {
-            read_timeout 60s
-        }
-    }
+	encode zstd gzip
+
+	# Batasi ukuran body di sisi proxy juga
+	request_body {
+		max_size 2MB
+	}
+
+	@mcp path /mcp /mcp/*
+
+	handle @mcp {
+		log_skip
+		reverse_proxy 127.0.0.1:8765 {
+			header_up X-Forwarded-For {remote_host}
+			transport http {
+				read_timeout 60s
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8765 {
+			header_up X-Forwarded-For {remote_host}
+			transport http {
+				read_timeout 60s
+			}
+		}
+	}
 }
 # Setelah ini aktif, set "server.proxy_tepercaya": true di konfigurasi.json
 # supaya rate limit membaca IP klien dari entri TERAKHIR X-Forwarded-For.
-
-# --- Custom Connector claude.ai (MCP Streamable HTTP di /mcp) ---
-# PENTING: token ada literal di path (/mcp/<token>) bila kamu pakai jalur URL-rahasia.
-# log_message di ingat/api.py sudah meredaksinya (K19), tapi Caddy TIDAK TAHU itu — access log Caddy
-# akan mencatat path mentah kecuali kamu matikan/saring log untuk path ini secara eksplisit:
-memori.contoh-domain.id {
-    encode zstd gzip
-    request_body { max_size 2MB }
-
-    @mcp path /mcp /mcp/*
-    handle @mcp {
-        log_skip   # tidak ada access log sama sekali untuk /mcp — token tidak pernah tersimpan di disk Caddy
-        reverse_proxy 127.0.0.1:8765 {
-            header_up X-Forwarded-For {remote_host}
-            transport http { read_timeout 60s }
-        }
-    }
-    handle {
-        reverse_proxy 127.0.0.1:8765 {
-            header_up X-Forwarded-For {remote_host}
-            transport http { read_timeout 60s }
-        }
-    }
-}

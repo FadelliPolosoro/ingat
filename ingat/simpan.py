@@ -332,16 +332,24 @@ class Store:
         path = os.path.join(sub, f"{id_}.json.gz")
         with gzip.open(path, "wt", encoding="utf-8") as f:
             json.dump(isi, f, ensure_ascii=False)
-        return os.path.relpath(path, self.dir_data)
+        # `isi_ref` ikut pindah bersama store (cadangan, migrasi laptop→VPS, ganti perangkat), jadi
+        # separatornya TIDAK boleh ikut OS penulis. `os.path.relpath` memberi `\` di Windows; di Linux
+        # ref itu jadi nama berkas literal dan bukti verbatim hilang senyap. Kontrak: selalu `/`.
+        return os.path.relpath(path, self.dir_data).replace(os.sep, "/")
+
+    @staticmethod
+    def _ref_lokal(ref: str) -> str:
+        """Ref → path OS ini. Menerima `/` (kontrak) maupun `\\` (store lama yang ditulis Windows)."""
+        return ref.replace("\\", "/").replace("/", os.sep)
 
     def buka_dingin(self, ref: str) -> dict:
-        with gzip.open(os.path.join(self.dir_data, ref), "rt", encoding="utf-8") as f:
+        with gzip.open(os.path.join(self.dir_data, self._ref_lokal(ref)), "rt", encoding="utf-8") as f:
             return json.load(f)
 
     def _hapus_dingin(self, ref: str):
         """Gulung balik blob dingin yang sudah telanjur ditulis."""
         try:
-            os.remove(os.path.join(self.dir_data, ref))
+            os.remove(os.path.join(self.dir_data, self._ref_lokal(ref)))
         except OSError:
             pass
 

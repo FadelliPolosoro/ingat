@@ -20,6 +20,9 @@ biru "== 1/6 Paket dasar =="
 apt update -qq
 apt install -y -qq docker.io docker-compose-plugin caddy unzip curl ca-certificates >/dev/null
 systemctl enable --now docker >/dev/null 2>&1 || true
+# `unzip` dipakai di langkah 3 — kalau paketnya gagal terpasang, gagal sekarang dengan pesan jelas,
+# jangan di tengah pembongkaran arsip.
+command -v unzip >/dev/null || { echo "unzip gagal terpasang — 'apt install unzip' manual dulu" >&2; exit 1; }
 
 biru "== 2/6 Ollama (embedding lokal) =="
 if ! command -v ollama >/dev/null; then
@@ -78,6 +81,10 @@ else
   echo "konfigurasi.json sudah ada, dilewati"
 fi
 mkdir -p vault/pelajaran/_usulan vault/prosedur/_usulan vault/norma
+# Container jalan sebagai uid 10001 (non-root, lihat Dockerfile). Folder yang baru dibuat root di
+# sini akan ditolak saat Vault() membuat subfoldernya sendiri:
+#   PermissionError: [Errno 13] Permission denied: '/vault/norma/_konsolidasi'
+chown -R 10001:10001 vault
 
 biru "== 5/6 Model embedding =="
 if ! ollama list 2>/dev/null | grep -q ingat-e5-base; then

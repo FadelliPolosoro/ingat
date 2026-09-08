@@ -4,6 +4,7 @@ transport HTTP disuntik palsu. Ini menutup celah: sebelumnya gate.py dan penyedi
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from unittest import mock
 
@@ -99,6 +100,36 @@ class TransportPalsu(unittest.TestCase):
         with mock.patch("ingat.penyedia._post_json", side_effect=PenyediaGagal("HTTP 500")):
             with self.assertRaises(PenyediaGagal):
                 p.tanya("sistem", "user")
+
+
+class KunciCatatanDiBlokPenyedia(unittest.TestCase):
+    """Regresi: `_catatan` di blok `penyedia` pernah merobohkan server saat start.
+
+    Ditemukan waktu deploy ke VPS 8 Sep 2026, bukan dari membaca kode: `bangun_penyedia`
+    mengulang SEMUA kunci, termasuk `_catatan` yang nilainya string, lalu memanggil `.get`
+    di atasnya → AttributeError. Karena `konfigurasi.contoh.json` selalu memuat kunci itu,
+    setiap orang yang menyalin contoh ke konfigurasi.json pasti kena.
+    """
+
+    def test_kunci_awalan_garis_bawah_dilewati(self):
+        hasil = bangun_penyedia({"_catatan": "ini catatan untuk manusia", "lokal": {"aktif": False}})
+        self.assertEqual(hasil, {}, "kunci `_catatan` harus dilewati, bukan diperlakukan sebagai penyedia")
+
+    def test_nilai_bukan_objek_dilewati_bukan_meledak(self):
+        for sampah in ("teks", 123, ["daftar"], None):
+            with self.subTest(sampah=sampah):
+                self.assertEqual(bangun_penyedia({"aneh": sampah}), {},
+                                 f"nilai {type(sampah).__name__} harus dilewati diam-diam, bukan melempar AttributeError")
+
+    def test_konfigurasi_contoh_yang_sungguhan_dikirim_tidak_merobohkan(self):
+        """Penjaga paling penting: berkas yang BENAR-BENAR kami kirim ke pengguna harus bisa dimuat."""
+        akar = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(akar, "konfigurasi.contoh.json"), encoding="utf-8") as f:
+            contoh = json.load(f)
+        self.assertIn("_catatan", contoh["penyedia"],
+                      "uji ini kehilangan maknanya kalau `_catatan` sudah tidak ada di contoh — sesuaikan ujinya")
+        hasil = bangun_penyedia(contoh["penyedia"])
+        self.assertEqual(hasil, {}, "semua penyedia di contoh ber-aktif:false, jadi hasilnya harus kosong — bukan galat")
 
 
 if __name__ == "__main__":
