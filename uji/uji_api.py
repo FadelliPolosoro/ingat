@@ -121,6 +121,39 @@ class ServerUji(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("/episode", hasil.get("paths", {}))
 
+    # ---- yang dipakai hook mode jauh (ingat/jauh.py) --------------------------------
+    def test_episode_dengan_id_meng_upsert_bukan_menambah(self):
+        """Hook Stop mengirim id deterministik tiap kali sesi berhenti. Tanpa `id` diteruskan, tiap
+        Stop membuat episode baru — banjir yang justru dicegah desain anti-banjir di tangkap.py."""
+        badan = {"isi": "langkah pertama", "id": "ep-sesi-uji-jauh", "sumber": "claude-code", "tier": "I",
+                 "lingkup": "proyek:uji", "jenis_kejadian": "sukses", "ringkas": "sesi 1 langkah"}
+        status1, j1 = self._pukul("POST", "/episode", badan, token=self.token)
+        badan["isi"] = "langkah pertama dan kedua"
+        status2, j2 = self._pukul("POST", "/episode", badan, token=self.token)
+        self.assertEqual((status1, status2), (201, 201))
+        self.assertEqual(j1["id"], "ep-sesi-uji-jauh", "id yang dikirim klien harus dipakai apa adanya")
+        self.assertEqual(j2["id"], j1["id"], "pengiriman kedua harus menimpa episode yang sama")
+        jumlah = self.app.store.db.execute(
+            "SELECT COUNT(*) FROM episode WHERE id=?", ("ep-sesi-uji-jauh",)).fetchone()[0]
+        self.assertEqual(jumlah, 1, f"harus tetap satu baris setelah dua kiriman, dapat {jumlah}")
+
+    def test_metrik_bisa_ditulis_lewat_post(self):
+        """Tanpa endpoint ini, alarm Bab 11 (`sesi_tanpa_episode`) mati diam-diam di mode jauh."""
+        status, jawab = self._pukul("POST", "/metrik", {"nama": "sesi_tanpa_episode", "nilai": 1,
+                                                        "konteks": {"sesi": "abc", "lingkup": "proyek:uji"}},
+                                    token=self.token)
+        self.assertEqual(status, 200)
+        self.assertTrue(jawab.get("ok"))
+        baris = self.app.store.db.execute(
+            "SELECT nama, nilai, konteks FROM metrik WHERE nama='sesi_tanpa_episode'").fetchone()
+        self.assertIsNotNone(baris, "metrik yang dikirim lewat HTTP harus mendarat di tabel metrik")
+        self.assertEqual(baris[1], 1.0)
+        self.assertIn("abc", baris[2], "konteks sesi harus ikut tersimpan")
+
+    def test_metrik_post_tetap_wajib_token(self):
+        status, _ = self._pukul("POST", "/metrik", {"nama": "x", "nilai": 1})
+        self.assertEqual(status, 401, "endpoint tulis baru tidak boleh terbuka tanpa token")
+
 
 if __name__ == "__main__":
     unittest.main()

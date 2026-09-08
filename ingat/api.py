@@ -56,7 +56,7 @@ def _openapi(host: str) -> dict:
         "components": {"securitySchemes": {"bearer": {"type": "http", "scheme": "bearer"}}},
         "paths": {
             "/sehat": {"get": {"summary": "Status layanan", "responses": {"200": {"description": "OK"}}}},
-            "/episode": {"post": op("Catat episode (L0)", {"isi": S, "sumber": S, "tier": S, "lingkup": S, "jenis_kejadian": S, "ringkas": S, "instrumen": {"type": "array", "items": S}, "langkah": {"type": "array", "items": S}, "sesi": S})},
+            "/episode": {"post": op("Catat episode (L0). `id` opsional: kirim id deterministik untuk meng-upsert episode yang sama (dipakai hook Stop).", {"isi": S, "id": S, "sumber": S, "tier": S, "lingkup": S, "jenis_kejadian": S, "ringkas": S, "instrumen": {"type": "array", "items": S}, "langkah": {"type": "array", "items": S}, "sesi": S})},
             "/ingat": {"post": op("L-tarik: ambil memori berperingkat", {"query": S, "lingkup": S, "jenis": S, "tanggal_peristiwa": S, "tugas": S, "lingkungan": {"type": "object"}, "anggaran_token": {"type": "integer"}, "sesi": S})},
             "/startup": {"post": op("L-peta + L-aturan", {"lingkup": S, "tugas": S, "lingkungan": {"type": "object"}, "sesi": S})},
             "/bukti/{id}": {"get": {"summary": "L-bukti: isi verbatim satu episode", "security": [{"bearer": []}], "parameters": [{"name": "id", "in": "path", "required": True, "schema": S}], "responses": {"200": {"description": "OK"}}}},
@@ -65,7 +65,8 @@ def _openapi(host: str) -> dict:
             "/sinkron": {"post": op("Sinkron vault Obsidian -> store")},
             "/instrumen": {"post": op("Daftarkan instrumen baru (7.4)", {"id": S, "nama": S, "dipasang_sejak": S, "cakupan": S, "titik_buta_diketahui": {"type": "array", "items": S}})},
             "/prosedur/{id}/eksekusi": {"post": {"summary": "Catat hasil eksekusi prosedur", "security": [{"bearer": []}], "parameters": [{"name": "id", "in": "path", "required": True, "schema": S}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"berhasil": {"type": "boolean"}}}}}}, "responses": {"200": {"description": "OK"}}}},
-            "/metrik": {"get": op("Ringkasan metrik (Bab 11)")},
+            "/metrik": {"get": op("Ringkasan metrik (Bab 11)"),
+                        "post": op("Catat satu metrik (dipakai hook mode jauh)", {"nama": S, "nilai": {"type": "number"}, "konteks": {"type": "object"}})},
             "/penyedia": {"get": op("Daftar penyedia aktif + preset")},
         },
     }
@@ -378,8 +379,17 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 b = self._badan()
                 sesi = b.pop("sesi", None) or self.headers.get("X-Sesi", "")
                 if path == "/episode":
-                    ep = app.store.tambah_episode(b.pop("isi", ""), sesi=sesi, **{k: b[k] for k in ("sumber", "tier", "lingkup", "jenis_kejadian", "ringkas", "instrumen", "langkah") if k in b})
+                    # `id` ikut diteruskan: hook Stop memakai id deterministik (`ep-sesi-<sesi>`) supaya
+                    # satu sesi menghasilkan SATU episode yang di-upsert, bukan satu episode tiap Stop.
+                    # Tanpa ini klien jauh (ingat/jauh.py) kehilangan sifat anti-banjir itu.
+                    ep = app.store.tambah_episode(b.pop("isi", ""), sesi=sesi, **{k: b[k] for k in ("id", "sumber", "tier", "lingkup", "jenis_kejadian", "ringkas", "instrumen", "langkah") if k in b})
                     return self._kirim(201, {"id": ep.id, "bobot": ep.bobot, "isi_ref": ep.isi_ref})
+                if path == "/metrik":
+                    # Pasangan tulis dari GET /metrik. Dipakai klien jauh untuk `sesi_tanpa_episode` /
+                    # `sesi_dengan_episode`; tanpa endpoint ini alarm Bab 11 mati diam-diam begitu
+                    # hook dipindah ke mode jauh.
+                    app.store.catat_metrik(str(b.get("nama", "")), float(b.get("nilai", 1)), **(b.get("konteks") or {}))
+                    return self._kirim(200, {"ok": True})
                 if path == "/ingat":
                     return self._kirim(200, app.gateway.ingat(sesi=sesi, **{k: b[k] for k in ("query", "lingkup", "jenis", "tanggal_peristiwa", "tugas", "lingkungan", "anggaran_token") if k in b}))
                 if path == "/startup":

@@ -17,6 +17,11 @@ Prinsip: hook TIDAK PERNAH memblokir Claude — selalu exit 0; galat ditulis ke 
 Redaksi kredensial dan penanda tier terjadi di `Store.tambah_episode` (satu-satunya jalur tulis).
 Konfigurasi: env `INGAT_KONFIG` → `~/.ingat/konfigurasi.json` → `./konfigurasi.json`.
 Lingkup: env `INGAT_LINGKUP` → berkas `<cwd>/.ingat-lingkup` → `proyek:<nama folder cwd>`.
+
+Mode jauh: bila konfigurasi memuat blok `jauh` berisi `host`, episode ditulis ke server itu lewat
+HTTPS (lihat `ingat/jauh.py`) alih-alih ke SQLite mesin ini — satu memori dipakai bersama semua
+perangkat, dan perangkatnya boleh berganti. Server tak terjangkau tidak pernah menggagalkan hook:
+episode masuk spool lokal dan dikirim ulang belakangan.
 """
 from __future__ import annotations
 
@@ -28,6 +33,7 @@ import traceback
 
 from . import skema
 from .aplikasi import Aplikasi, muat_konfig
+from .jauh import bangun_aplikasi_jauh
 
 MAKS_LANGKAH = 60
 POLA_GAGAL = re.compile(r"\b(error|failed|failure|traceback|exception|not found|denied|refused|cannot|fatal)\b", re.I)
@@ -216,7 +222,10 @@ def main(argv: list[str] | None = None) -> int:
         if argv and not ev.get("hook_event_name"):
             ev["hook_event_name"] = argv[0]
         konfig = muat_konfig(path_konfig())
-        app = Aplikasi(konfig)
+        # Mode jauh (blok `jauh` di konfigurasi): episode ditulis ke server, bukan ke SQLite mesin ini —
+        # supaya memori tidak ikut mati bersama perangkatnya. Buffer sesi tetap lokal: ia cuma catatan
+        # sementara langkah sesi berjalan, dan tidak ada gunanya menyeberangi jaringan tiap tool.
+        app = bangun_aplikasi_jauh(konfig) or Aplikasi(konfig)
         hasil = Penangkap(app, konfig["dir_data"]).tangani(ev)
         nama_ev = ev.get("hook_event_name")
         if nama_ev == "UserPromptSubmit" and hasil.get("pesan"):
