@@ -58,13 +58,46 @@
   .benang-garis.instrumen{stroke:var(--gugur);stroke-opacity:.4}
   .redup{opacity:.15}
 
-  #gerbang{position:fixed;inset:0;background:var(--dasar);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-  #gerbang .kotak{background:var(--panel);border:1px solid var(--garis);border-radius:4px;padding:26px 30px;width:340px}
+  #gerbang{position:fixed;inset:0;background:var(--dasar);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:16px;overflow-y:auto}
+  #gerbang .kotak{background:var(--panel);border:1px solid var(--garis);border-radius:4px;padding:26px 30px;width:340px;max-width:100%}
   #gerbang h1{font-family:var(--serif);margin:0 0 4px;font-size:19px}
   #gerbang p{color:var(--pudar);font-size:12.5px;margin:0 0 16px;line-height:1.5}
   #gerbang input{width:100%;padding:8px 10px;font:inherit;border:1px solid var(--garis);border-radius:3px;margin-bottom:10px}
   #gerbang button{width:100%;padding:8px;background:var(--tinta);color:var(--dasar);border:0;border-radius:3px;cursor:pointer;font:inherit}
   #gerbang .galat{color:var(--cap);font-size:12px;min-height:16px}
+
+  /* Tab panel — hanya dipakai di layar sempit; di desktop tiga panel tampil bersamaan. */
+  #tab{display:none}
+
+  /* ---------------------------------------------------------------- layar sempit (HP & tablet portrait)
+     Tata letak desktop `240px 1fr 1fr` menyisakan ~67px per panel di layar 375px — terbaca sebagai
+     rusak, bukan sebagai sempit. Di bawah 820px layout jadi SATU kolom dan satu panel tampil penuh
+     sekali waktu, dipilih lewat tab. Mengutamakan fungsi: setiap panel dapat lebar penuh. */
+  @media (max-width: 820px){
+    #app.siap{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+    header{grid-column:1;flex-wrap:wrap;gap:6px 10px;padding:8px 12px}
+    header .kanan{width:100%;margin-left:0;gap:10px;font-size:11px}
+
+    #tab{display:flex;grid-column:1;border-bottom:1px solid var(--garis);background:var(--dasar2)}
+    #tab button{flex:1;padding:11px 6px;border:0;background:transparent;font:inherit;font-size:13px;
+                color:var(--pudar);cursor:pointer;border-bottom:2px solid transparent;
+                min-height:44px}   /* 44px: target sentuh yang nyaman, bukan angka hiasan */
+    #tab button.aktif{color:var(--tinta);border-bottom-color:var(--benang);background:var(--panel)}
+
+    /* Satu panel sekali waktu. `grid-column:1` wajib — tanpa ini panel masih mencari kolom 2/3. */
+    nav, main, #papan{grid-column:1;border-right:0;min-height:0}
+    nav, main, #papan{display:none}
+    body[data-panel="registri"] nav{display:block}
+    body[data-panel="catatan"]  main{display:block}
+    body[data-panel="papan"]    #papan{display:block}
+
+    main{padding:16px 14px}
+    main .isi{max-width:none;font-size:14px}      /* 14px: lebih enak dibaca di HP daripada 13.5px */
+    main h2{font-size:19px}
+    main .placeholder{margin-top:32px}
+    nav .baris{padding:10px 12px 10px 22px;font-size:13px}   /* baris lebih tinggi = lebih mudah ditekan */
+    #papan .legenda{max-width:100%;font-size:10px}
+  }
 </style>
 </head>
 <body>
@@ -98,6 +131,11 @@
       <a href="/auth/keluar" style="color:var(--pudar);font-size:11px">keluar</a>
     </div>
   </header>
+  <div id="tab" role="tablist">
+    <button type="button" data-panel="registri" role="tab">Registri</button>
+    <button type="button" data-panel="catatan" role="tab">Catatan</button>
+    <button type="button" data-panel="papan" role="tab">Papan</button>
+  </div>
   <nav id="nav"></nav>
   <main id="main"><div class="placeholder">Pilih catatan dari Registri atau klik simpul di Papan Bukti</div></main>
   <div id="papan">
@@ -227,6 +265,10 @@
     main.innerHTML = `<h2>${n.label}</h2><div class="stempel">${n.meta}</div><div class="isi"></div>`;
     main.querySelector('.isi').textContent = n.detail || '';
     soroti(id);
+    // Di layar sempit `main` sedang tersembunyi kalau tab lain yang aktif — tanpa pindah tab, menekan
+    // baris Registri atau simpul Papan tampak seperti tidak melakukan apa pun. Di desktop tab-nya
+    // ber-`display:none`, jadi pemanggilan ini tidak mengubah apa-apa di sana.
+    pilihPanel('catatan');
   }
 
   // ---------------------------------------------------------------- papan bukti (SVG + simulasi gaya)
@@ -237,10 +279,37 @@
 
   function ukur() {
     const kotak = document.getElementById('papan').getBoundingClientRect();
+    // Di layar sempit panel non-aktif ber-`display:none`, jadi kotaknya 0×0. Memasang viewBox 0 0 0 0
+    // membuat graf hilang total dan tidak pulih sendiri saat tab dibuka. Pakai ukuran terakhir yang
+    // masuk akal sampai panelnya benar-benar terlihat; `pilihPanel` memanggil ukur() lagi setelah itu.
+    if (kotak.width < 1 || kotak.height < 1) return;
     W = kotak.width; H = kotak.height;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   }
   window.addEventListener('resize', ukur);
+
+  // ---------------------------------------------------------------- tab panel (layar sempit)
+  // Di desktop ketiga panel tampil bersamaan dan tab-nya disembunyikan CSS; atribut ini tetap
+  // dipasang supaya keadaan awal tidak bergantung ukuran layar saat halaman dibuka (rotasi HP,
+  // jendela diubah ukurannya) — CSS yang memutuskan apakah tab dipakai, bukan JS.
+  const tab = document.getElementById('tab');
+  function pilihPanel(nama) {
+    document.body.dataset.panel = nama;
+    for (const b of tab.querySelectorAll('button')) {
+      const aktif = b.dataset.panel === nama;
+      b.classList.toggle('aktif', aktif);
+      b.setAttribute('aria-selected', aktif ? 'true' : 'false');
+    }
+    // Panel papan baru punya ukuran SETELAH terlihat — ukur ulang, kalau tidak grafnya kosong.
+    // Penghitung energi juga di-nolkan: simulasi yang sudah "diam" berjalan ~4fps, dan penjepitan
+    // ke W/H yang baru akan terasa tersendat kalau tidak dibangunkan dulu.
+    if (nama === 'papan') requestAnimationFrame(() => { ukur(); energiRendahBerturut = 0; });
+  }
+  tab.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-panel]');
+    if (b) pilihPanel(b.dataset.panel);
+  });
+  pilihPanel('registri');   // mulai dari daftar: satu-satunya panel yang berguna sebelum ada pilihan
 
   function gambarGraf() {
     ukur();
