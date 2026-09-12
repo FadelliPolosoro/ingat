@@ -45,9 +45,11 @@ Ditambahkan ke daftar prinsip `docs/spek-arsitektur-memori.md` Bab 2 (saat ini b
 - Parameter anggaran harian & titik penjaga manusia.
 - Perubahan kontrak/skema bila ada.
 
-## 5. Konflik dengan kode yang sudah ada — BELUM DIREKONSILIASI
+## 5. Konflik dengan kode — ARAH DIPUTUSKAN (implementasi tertunda)
 
-**Jangan diperlakukan sebagai sudah selesai.** Dilaporkan ke Tuan Muda 2026-09-13; menunggu arah.
+**Arah diputuskan 2026-09-13:** Tuan Muda **setuju** gate tier-S dilonggarkan supaya model lokal
+boleh memproses tier S (dijaga P11 + tiga rem lain). Ini membalik invarian yang saat ini di-*hardcode*
+dan diuji. **Implementasi = tugas "bangun" terpisah, BELUM dikerjakan** — belum dijadwalkan.
 
 - `ingat/gate.py` saat ini: `Gate.izin("S")` **selalu** mengembalikan `[]`; `wajib(…, "S")`
   **selalu** melempar `GateDitolak("tier S tidak pernah boleh dikirim ke penyedia inferensi (Bab 9)")`.
