@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | DRAFT v0.5.4 — K27: perbaikan efek samping CLI (pasang tidak lagi membuat Store/data). v0.5.3 — K26: verifikasi dua langkah mandiri (TOTP RFC 6238, tanpa Google), pembatas laju khusus, perintah totp-atur. v0.5.2 — K25: Google Auth (OAuth2 stdlib-only, sesi cookie HMAC, allowlist wajib) + instal-vps.sh + panduan Google Cloud Console. v0.5.1 — K24: pembersihan atribusi (CLAUDE.md->AGENTS.md+stub fungsional, narasi suara-asisten dinetralkan di 6 berkas). v0.5.0 — K23: dashboard visual Papan Bukti (graf force-directed SVG tulisan sendiri, endpoint /dashboard + /dashboard/data). v0.4.9 — K22: suntik otomatis di percakapan baru (browser) — otomatisasi baca kini menyamai Claude Code SessionStart untuk semua platform kecuali toggle connector Claude.ai. v0.4.8 — K21: pengingat relevansi (badge, tidak menyisipkan) + Suntik lagi (cicilan anggaran_token, tanpa perubahan server). v0.4.7 — K20: fitur suntik memori di ekstensi browser (baca-otomatis untuk platform tanpa MCP), jaminan struktural tidak-pernah-submit. v0.4.6 — K19: MCP Streamable HTTP di /mcp — ingat bisa dipasang sebagai Custom Connector claude.ai; bug kebocoran token di log ditemukan dan diperbaiki sebelum dikirim. v0.4.5 — K18: sumber episode ketiga (browser, selain Claude Code dan API langsung); `/episode` kini teruji (8 uji server nyata). v0.4.4 — K17: Gemini ditambah ke konektor; izin berkas SQLite Python diperbaiki (0600/0700); gate.py & penyedia.py yang sebelumnya tanpa uji kini teruji (13 uji). v0.4.3 — K11 tangkap diimplementasikan (`ingat/tangkap.py`, `pasang`); jalur data nyata lengkap: hook → episode → konsolidasi → tanya → jawab → vault → gateway. v0.4.2 — Python selaras kontrak v2 (vektor terpisah, dua koleksi R12, identitas embedder, SQL portabel); port TS terbukti membaca DB Python. v0.4.1 — R8 diimplementasikan. v0.4.0 — v0.3.3 + Lampiran E (landasan kognitif & neurosains dari tiga buku teks terbuka): 9 validasi, 5 revisi (R8–R12), 3 kandidat kontrak v3. Sebelumnya v0.3.3 — v0.3.2 + 7.7 konsolidasi berpandu pertanyaan (K15, `ingat/tanya.py`, 9 uji). Sebelumnya: v0.3.1 + kontrak v2 (K14): kolom `langkah`/`sesi` episode, `tier_maks`/`usulan_perluasan_lingkup`/`sintesis`/`catatan` pelajaran, penghitung eksekusi prosedur, jendela `berlaku_sampai` + kolom konsolidasi norma, tabel `metrik` & `panggilan_ingat`. Python 30 uji hijau, port TS 28 hijau (+2 todo) |
+| **Status** | DRAFT v0.5.5 — K28: prinsip P11 (Bab 2) + empat rem tier S (9.1, `ingat/rem.py`); tier S boleh disintesis model LOKAL saja, gagal-tertutup, hanya jalur konsolidasi, tidak pernah naik status otomatis. 29 uji baru. v0.5.4 — K27: perbaikan efek samping CLI (pasang tidak lagi membuat Store/data). v0.5.3 — K26: verifikasi dua langkah mandiri (TOTP RFC 6238, tanpa Google), pembatas laju khusus, perintah totp-atur. v0.5.2 — K25: Google Auth (OAuth2 stdlib-only, sesi cookie HMAC, allowlist wajib) + instal-vps.sh + panduan Google Cloud Console. v0.5.1 — K24: pembersihan atribusi (CLAUDE.md->AGENTS.md+stub fungsional, narasi suara-asisten dinetralkan di 6 berkas). v0.5.0 — K23: dashboard visual Papan Bukti (graf force-directed SVG tulisan sendiri, endpoint /dashboard + /dashboard/data). v0.4.9 — K22: suntik otomatis di percakapan baru (browser) — otomatisasi baca kini menyamai Claude Code SessionStart untuk semua platform kecuali toggle connector Claude.ai. v0.4.8 — K21: pengingat relevansi (badge, tidak menyisipkan) + Suntik lagi (cicilan anggaran_token, tanpa perubahan server). v0.4.7 — K20: fitur suntik memori di ekstensi browser (baca-otomatis untuk platform tanpa MCP), jaminan struktural tidak-pernah-submit. v0.4.6 — K19: MCP Streamable HTTP di /mcp — ingat bisa dipasang sebagai Custom Connector claude.ai; bug kebocoran token di log ditemukan dan diperbaiki sebelum dikirim. v0.4.5 — K18: sumber episode ketiga (browser, selain Claude Code dan API langsung); `/episode` kini teruji (8 uji server nyata). v0.4.4 — K17: Gemini ditambah ke konektor; izin berkas SQLite Python diperbaiki (0600/0700); gate.py & penyedia.py yang sebelumnya tanpa uji kini teruji (13 uji). v0.4.3 — K11 tangkap diimplementasikan (`ingat/tangkap.py`, `pasang`); jalur data nyata lengkap: hook → episode → konsolidasi → tanya → jawab → vault → gateway. v0.4.2 — Python selaras kontrak v2 (vektor terpisah, dua koleksi R12, identitas embedder, SQL portabel); port TS terbukti membaca DB Python. v0.4.1 — R8 diimplementasikan. v0.4.0 — v0.3.3 + Lampiran E (landasan kognitif & neurosains dari tiga buku teks terbuka): 9 validasi, 5 revisi (R8–R12), 3 kandidat kontrak v3. Sebelumnya v0.3.3 — v0.3.2 + 7.7 konsolidasi berpandu pertanyaan (K15, `ingat/tanya.py`, 9 uji). Sebelumnya: v0.3.1 + kontrak v2 (K14): kolom `langkah`/`sesi` episode, `tier_maks`/`usulan_perluasan_lingkup`/`sintesis`/`catatan` pelajaran, penghitung eksekusi prosedur, jendela `berlaku_sampai` + kolom konsolidasi norma, tabel `metrik` & `panggilan_ingat`. Python 30 uji hijau, port TS 28 hijau (+2 todo) |
 | **Tanggal** | 6 September 2026 |
 | **Induk** | `docs/spek-ai-hybrid.md` (Epic E19) — dokumen ini memakai gate klasifikasi data P/I/S yang didefinisikan di sana |
 | **Lokasi usulan** | `docs/spek-arsitektur-memori.md` |
@@ -67,6 +67,7 @@ Yang masuk ke context window: **peta + pelajaran aktif dalam lingkup + prosedur 
 | P8 | **Simpan tanpa mengikat konteks asal.** | Pelajaran ditulis pada tingkat abstraksi yang bisa ditransfer. Transfer ke kasus baru adalah tugas penalaran, bukan memori. |
 | P9 | **Tidak ada pelajaran tanpa lingkup.** | Setiap pelajaran/prosedur punya `lingkup`; yang belum terbukti lintas lingkup tidak boleh menyala di luar lingkupnya. |
 | P10 | **Hipotesis boleh dipakai, tidak boleh dipercaya diam-diam.** | Hipotesis masuk konteks hanya dengan bendera "belum ditinjau" yang diteruskan ke jawaban. Naik ke aturan hanya oleh manusia. |
+| P11 | **Abstraksi, bukan penyamaran.** (K28) | Apa pun yang lahir dari data tier tinggi harus naik ke tingkat abstraksi yang bisa ditransfer (P8), bukan sekadar ditutupi. Menyalin kalimat sumber lalu menghapus angkanya adalah penyamaran dan ditolak. Ditegakkan pada **keluaran** model, bukan masukannya: model lokal boleh *melihat* tier S (tidak keluar mesin), tetapi yang ia *hasilkan* diperiksa `ingat/rem.py:periksa_abstraksi` — pola tier S, deret ≥8 digit, dan run ≥5 kata berurutan yang sama dengan sumber semuanya menggugurkan hasil. |
 
 ---
 
@@ -295,7 +296,7 @@ Ambang dan lingkup:
 
 ### 7.3 Langkah job (R6)
 
-1. Ambil episode `status: aktif` dengan `tier ∈ {P, I}` (tier S dilewati — Bab 9).
+1. Ambil episode `status: aktif` dengan `tier ∈ {P, I}` (tier S dilewati — Bab 9). Sejak K28, bila keempat rem tier S terpasang (9.1), `tier ∈ {P, I, S}`.
 2. Kelompokkan episode serupa (embedding + `instrumen` + `jenis_kejadian` + `lingkup`).
 3. Untuk tiap kelompok: cari pelajaran aktif yang `pemicu`-nya cocok **dan** `lingkup`-nya memuat lingkup episode.
    - Cocok & konsisten → tambah ke `bukti`, perbarui `terakhir_dikonfirmasi`, geser `tinjau_setelah`, naikkan `keyakinan`; bila bukti baru dari lingkup berbeda → usulkan perluasan `lingkup`.
@@ -430,9 +431,36 @@ Tier mengikuti definisi di `docs/spek-ai-hybrid.md`.
 |---|---|---|---|---|
 | **P** | Normal | Ya, provider apa pun yang lolos gate | Boleh ditulis ke Obsidian | Normal |
 | **I** | Normal | Ya, **hanya** endpoint terkendali/privat | Boleh; `ringkas`, `pelajaran`, `langkah` tidak boleh memuat nilai/nama internal spesifik | Normal |
-| **S** | **Tersimpan verbatim** (K10), kredensial diredaksi, ditandai `tier: S` otomatis oleh `src/tangkap/tier.ts` bila terdeteksi NIK/NPWP/rekening/kata kunci payroll-pajak | **Tidak pernah** — job melewati tier S | Tidak ada dari mesin — pelajaran tentang *proses* di sekitar data S ditulis manusia | Normal — norma bukan data sensitif |
+| **S** | **Tersimpan verbatim** (K10), kredensial diredaksi, ditandai `tier: S` otomatis oleh `src/tangkap/tier.ts` bila terdeteksi NIK/NPWP/rekening/kata kunci payroll-pajak | **Default tidak pernah.** Sejak K28: boleh **hanya** ke model lokal, **hanya** di jalur konsolidasi, dan **hanya** bila keempat rem terpasang sekaligus (9.1) | Boleh dari mesin **hanya** bila lolos P11; yang gagal P11 → pelajaran ditulis manusia. Tidak pernah naik status otomatis (rem 4) | Normal — norma bukan data sensitif |
 
 Contoh tier S: bukti pajak, payroll, dokumen klien, apa pun yang memuat NIK/NPWP/rekening. Episodenya boleh tersimpan (K10); dokumen dan kewajiban retensinya tetap urusan sistem arsip, dan pemrosesan data pribadi tunduk pada UU 27/2022 (PDP) — bukan nasihat hukum, verifikasi.
+
+### 9.1 Empat rem tier S (K28) — `ingat/rem.py`
+
+Sebelum K28 tier S ditolak ke penyedia inferensi mana pun, tanpa syarat. K28 melonggarkannya **hanya**
+untuk model yang berjalan di mesin sendiri. Yang membuat pelonggaran ini bukan pelemahan adalah bahwa
+**keempat rem wajib terpasang sekaligus** — dan sistemnya **gagal-tertutup**: satu rem hilang, tier S
+tertutup lagi persis seperti sebelum K28.
+
+| # | Rem | Ditegakkan di | Gagal-tertutup bila |
+|---|---|---|---|
+| 1 | **Gate P/I/S + lokalitas** | `RemTierS.penyedia_diizinkan` | penyedia tak terdaftar di `rem_tier_s.penyedia`, belum terkonfigurasi, atau `base_url`-nya bukan loopback/privat/label-tunggal |
+| 2 | **Abstraksi P11** | `periksa_abstraksi` atas **keluaran** model | keluaran memuat pola tier S, deret ≥8 digit, atau menyalin ≥5 kata berurutan dari sumber |
+| 3 | **Anggaran token harian** | `RemTierS.ada_anggaran` (tabel `metrik`, hari UTC) | `anggaran_token_harian` ≤ 0 atau kuota hari itu sudah habis |
+| 4 | **Manusia penjaga akhir** | `rem_tier_s.penjaga` + `konsolidasi.jalankan` | `penjaga` kosong; dan pelajaran ber-`tier_maks: S` **tidak pernah** naik status otomatis, berapa pun bobot buktinya |
+
+Dua batas yang sengaja dipertahankan:
+
+- **Ruang lingkup sempit.** Pelonggaran hanya berlaku untuk `jalur="konsolidasi"`. Jalur umum —
+  `Aplikasi.tanya` (`/tanya`) dan endpoint `/penyedia` — tetap menolak tier S selamanya. `gate.S` di
+  konfigurasi diabaikan supaya tidak jadi pintu belakang.
+- **Heuristik tier S tidak menyalin.** Untuk P/I, sintesis yang gagal jatuh ke heuristik "salin `ringkas`".
+  Untuk S itu terlarang — vault adalah repo git (K7), jadi menyalin ringkas episode akan membawa data
+  tier S keluar mesin. Bila sintesis gagal atau gugur P11, pelajarannya ditulis manusia.
+
+**Klien yang terhubung** (per 13 Sep 2026): Claude, Claude Desktop, ChatGPT, ChatGPT Desktop, Gemini,
+Perplexity. Semuanya bermodel cloud — **tidak satu pun boleh menerima tier S**. Rem 1 menutup mereka
+lewat uji lokalitas `base_url`, bukan lewat daftar nama, supaya klien baru tidak otomatis lolos.
 
 ---
 

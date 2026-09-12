@@ -325,6 +325,16 @@ class Store:
                             (skema.sekarang(), nama, float(nilai), json.dumps(konteks, ensure_ascii=False)))
             self.db.commit()
 
+    def jumlah_metrik(self, nama: str, prefiks_waktu: str = "") -> float:
+        """Jumlah `nilai` untuk satu metrik, opsional dibatasi awalan `waktu` (mis. '2026-09-13'
+        untuk satu hari UTC). Dipakai rem anggaran harian K28 (`ingat/rem.py`)."""
+        with self._kunci:
+            row = self.db.execute(
+                "SELECT COALESCE(SUM(nilai),0) FROM metrik WHERE nama=? AND waktu LIKE ?",
+                (nama, f"{prefiks_waktu}%"),
+            ).fetchone()
+        return float(row[0] if row else 0.0)
+
     # ---- episode -----------------------------------------------------------
     def simpan_dingin(self, id_: str, isi: dict) -> str:
         sub = os.path.join(self.dir_dingin, id_[3:7], id_[7:9]) if id_.startswith("ep-") else self.dir_dingin

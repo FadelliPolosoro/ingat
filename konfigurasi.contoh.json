@@ -28,7 +28,7 @@
     "rasio_maks": 0.15
   },
   "gate": {
-    "_catatan": "Tier -> penyedia yang boleh menerima data tier itu (Bab 9, spek-ai-hybrid.md). S selalu kosong apa pun isinya.",
+    "_catatan": "Tier -> penyedia yang boleh menerima data tier itu (Bab 9, spek-ai-hybrid.md). Blok 'S' di sini DIABAIKAN — satu-satunya jalan membuka tier S adalah 'rem_tier_s' (K28).",
     "P": [
       "claude",
       "openai",
@@ -44,6 +44,13 @@
       "lokal"
     ],
     "S": []
+  },
+  "rem_tier_s": {
+    "_catatan": "K28 — empat rem wajib supaya model LOKAL boleh memproses tier S. Gagal-tertutup: keempatnya harus terisi sekaligus, kalau satu kurang tier S tertutup seperti sebelumnya. Hanya berlaku di jalur konsolidasi; /tanya tetap menolak tier S. Penyedia diverifikasi dari base_url-nya (harus loopback/privat/label-tunggal), bukan dari namanya.",
+    "aktif": false,
+    "penyedia": [],
+    "anggaran_token_harian": 0,
+    "penjaga": ""
   },
   "penyedia": {
     "claude": {

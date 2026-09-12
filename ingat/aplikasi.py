@@ -19,6 +19,8 @@ KONFIG_DEFAULT = {
     "embedding": {"jenis": "lokal"},
     "gateway": {"anggaran_tarik": 600, "maks_item": 5, "anggaran_peta": 300, "anggaran_aturan": 1500, "rasio_maks": 0.15},
     "gate": {"P": [], "I": [], "S": []},
+    # K28 — empat rem tier S. Default MATI: tanpa ini tier S tidak pernah ke penyedia mana pun.
+    "rem_tier_s": {"aktif": False, "penyedia": [], "anggaran_token_harian": 0, "penjaga": ""},
     "penyedia": {},
     "auth": {"allowed_emails": [], "redirect_uri": ""},
     "server": {"host": "127.0.0.1", "port": 8765, "proxy_tepercaya": False, "batas_body": 1_048_576,
@@ -61,8 +63,10 @@ class Aplikasi:
         os.makedirs(konfig["dir_data"], exist_ok=True)
         self.store = Store(konfig["dir_data"], self.penyemat, bangun_ulang_vektor=bangun_ulang_vektor)
         self.vault = Vault(konfig["vault"]) if konfig.get("vault") else None
-        self.gate = Gate(konfig.get("gate"))
+        # Penyedia dibangun lebih dulu: Gate memverifikasi rem 1 K28 dari `base_url` penyedia
+        # yang sungguhan terkonfigurasi, bukan dari namanya.
         self.penyedia = mod_penyedia.bangun_penyedia(konfig.get("penyedia"))
+        self.gate = Gate(konfig.get("gate"), konfig.get("rem_tier_s"), self.penyedia)
         self.gateway = Gateway(self.store, konfig.get("gateway"))
         self.konsolidator = Konsolidator(self.store, self.gate, self.penyedia, self.vault, konfig.get("konsolidasi"))
 

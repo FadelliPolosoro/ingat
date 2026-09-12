@@ -2,62 +2,77 @@
 
 | | |
 |---|---|
-| **Status** | RANGKUMAN KEPUTUSAN (bukan spek penuh). Ditulis 2026-09-13 dari keputusan sesi lain. Arsitektur rinci **belum ditulis**. |
+| **Status** | **TERBANGUN sebagian** (13 Sep 2026). Empat rem + P11 sudah jalan dan teruji (`ingat/rem.py`, 29 uji). Pilihan runtime model lokal masih terbuka. |
 | **Keputusan** | K28 (`KEPUTUSAN.md`) |
-| **Induk** | `docs/spek-arsitektur-memori.md` (gate P/I/S) + `docs/spek-ai-hybrid.md` **[BELUM ADA DI REPO — VERIFIKASI]** |
+| **Induk** | `docs/spek-arsitektur-memori.md` Bab 2 (P11) & 9.1 (empat rem) + `docs/spek-ai-hybrid.md` **[BELUM ADA DI REPO — VERIFIKASI]** |
 | **Pemilik keputusan** | Tuan Muda |
 
-> Dokumen ini merekam apa yang **diputuskan**, bukan cara membangunnya. Titik yang belum
-> dispesifikasikan ditandai `[BELUM DISPESIFIKASIKAN]`. Jangan dianggap final sebelum diisi.
+## 1. Prinsip P11 — "abstraksi bukan penyamaran" — TERBANGUN
 
-## 1. Prinsip P11 — "abstraksi bukan penyamaran"
+Masuk daftar prinsip spek arsitektur Bab 2 (sebelumnya berhenti di P10).
 
-Ditambahkan ke daftar prinsip `docs/spek-arsitektur-memori.md` Bab 2 (saat ini baru P1–P10).
-
-- **Inti:** data tier tinggi diangkat ke **tingkat abstraksi yang bisa ditransfer** sebelum
-  dilihat model orkestrator — *bukan* sekadar diredaksi/disamarkan (mengganti nama dengan `XXX`).
-  Abstraksi menghapus keterikatan pada identitas konkret sambil mempertahankan pola yang berguna;
-  penyamaran hanya menutupi permukaan dan bocor lewat konteks.
-- **Hubungan dengan P8** ("simpan tanpa mengikat konteks asal"): P11 adalah penerapan P8 pada
-  jalur orkestrasi model-ke-model. `[BELUM DISPESIFIKASIKAN: kriteria uji "sudah cukup abstrak?"]`
+- **Inti:** apa pun yang lahir dari data tier tinggi harus naik ke tingkat abstraksi yang bisa
+  ditransfer (P8), bukan sekadar ditutupi. Menyalin kalimat sumber lalu menghapus angkanya adalah
+  **penyamaran**, dan ditolak.
+- **Ditegakkan pada keluaran, bukan masukan.** Ini titik desain terpenting K28: model lokal memang
+  boleh *melihat* tier S — ia tidak keluar mesin, itulah dasar pelonggarannya. Yang dijaga adalah apa
+  yang ia *hasilkan*.
+- **Uji operasional** (`periksa_abstraksi`, jawaban atas "sudah cukup abstrak?"), keluaran gugur bila:
+  1. memuat pola tier S (`POLA_TIER_S`: NIK, NPWP, rekening, kata kunci payroll/pajak);
+  2. memuat deret ≥8 digit — identitas konkret;
+  3. menyalin ≥5 kata berurutan dari sumber (`AMBANG_RUN_KATA`) — ini yang menangkap penyamaran.
+- Keluaran yang gugur **dibuang**, bukan disimpan; kejadiannya dicatat ke metrik
+  `rem_tier_s_abstraksi_ditolak`.
 
 ## 2. Model lokal untuk tier S
 
 - **Pilihan:** Qwen3 **4B**; turun ke **1.7B** bila VPS berat (1 vCPU/4 GB — lihat catatan K9).
-- **Sifat:** lokal, **tidak keluar mesin** — inilah dasar mengapa tier S boleh menyentuhnya,
-  berbeda dari penyedia cloud.
+- **Sifat:** lokal, **tidak keluar mesin** — dasar mengapa tier S boleh menyentuhnya.
+- **Lokalitas diverifikasi dari alamat, bukan nama** (`alamat_lokal`): loopback, RFC1918, label tunggal
+  (`http://ollama:11434` — DNS Docker), atau sufiks `.local`/`.internal`. Penyedia bernama "lokal"
+  yang `base_url`-nya cloud **ditolak** — kalau tidak, rem 1 bisa dilewati hanya dengan menamai ulang.
 - `[BELUM DISPESIFIKASIKAN: runtime (Ollama vs vLLM vs llama.cpp), kuantisasi, sumber bobot/GGUF,
-  Modelfile, cara dijalankan di compose — samakan gaya dengan K9]`
+  Modelfile, cara dijalankan di compose — samakan gaya dengan K9]` — **status: PARKIR** atas
+  permintaan Tuan Muda.
 
-## 3. Empat rem wajib (pertahanan berlapis)
+## 3. Empat rem wajib — TERBANGUN (`ingat/rem.py`)
 
-1. **Gate P/I/S** — tetap dipakai; lihat konflik di Bab 5.
-2. **Abstraksi P11** — Bab 1.
-3. **Anggaran token harian** — batas atas pemakaian orkestrasi per hari.
-   `[BELUM DISPESIFIKASIKAN: angka, reset harian, perilaku saat habis]`
-4. **Manusia penjaga akhir** — keputusan akhir tetap di tangan manusia.
-   `[BELUM DISPESIFIKASIKAN: titik mana yang butuh persetujuan manusia]`
+Rinciannya di spek arsitektur **9.1**. Ringkas:
 
-## 4. Belum dispesifikasikan (daftar kerja)
+| # | Rem | Konfigurasi | Gagal-tertutup bila |
+|---|---|---|---|
+| 1 | Gate P/I/S + lokalitas | `rem_tier_s.penyedia` | tak terdaftar / tak terkonfigurasi / bukan alamat lokal |
+| 2 | Abstraksi P11 | — (tidak bisa dimatikan) | keluaran gugur uji Bab 1 |
+| 3 | Anggaran token harian | `rem_tier_s.anggaran_token_harian` | ≤ 0, atau kuota hari itu habis |
+| 4 | Manusia penjaga akhir | `rem_tier_s.aktif`, `rem_tier_s.penjaga` | sakelar mati / penjaga kosong |
 
-- Alur orkestrasi model-ke-model konkret (siapa memanggil siapa, untuk tugas apa).
-- Definisi operasional P11 + uji keberterimaan abstraksi.
-- Parameter anggaran harian & titik penjaga manusia.
-- Perubahan kontrak/skema bila ada.
+Rem 4 punya sisi kedua yang tidak bisa dimatikan lewat konfigurasi: pelajaran ber-`tier_maks: S`
+**tidak pernah** naik status otomatis, berapa pun bobot buktinya — manusia yang menilai.
 
-## 5. Konflik dengan kode — ARAH DIPUTUSKAN (implementasi tertunda)
+**Anggaran dicatat begitu model dipanggil**, termasuk saat keluarannya kemudian gugur P11. Alasannya:
+biaya sudah terjadi; kalau hanya yang lolos yang dihitung, keluaran buruk jadi gratis dan rem 3 bisa
+dikuras tanpa batas.
 
-**Arah diputuskan 2026-09-13:** Tuan Muda **setuju** gate tier-S dilonggarkan supaya model lokal
-boleh memproses tier S (dijaga P11 + tiga rem lain). Ini membalik invarian yang saat ini di-*hardcode*
-dan diuji. **Implementasi = tugas "bangun" terpisah, BELUM dikerjakan** — belum dijadwalkan.
+## 4. Ruang lingkup yang sengaja dipertahankan sempit
 
-- `ingat/gate.py` saat ini: `Gate.izin("S")` **selalu** mengembalikan `[]`; `wajib(…, "S")`
-  **selalu** melempar `GateDitolak("tier S tidak pernah boleh dikirim ke penyedia inferensi (Bab 9)")`.
-  Docstring: *"Tier S tidak pernah boleh — apa pun isi konfigurasi."*
-- `docs/spek-arsitektur-memori.md` Bab 7.3 & Bab 9: job konsolidasi **melewati tier S**;
-  tier S "Tidak pernah" dikonsolidasi oleh mesin.
-- Preset `lokal` di `ingat/penyedia.py` (`qwen2.5:7b`) diperlakukan sebagai penyedia inferensi
-  biasa → tier S diblokir darinya **juga**.
-- **K28 melonggarkan invarian ini**: model lokal boleh melihat tier S (terabstraksi P11).
-  Ini perubahan pada invarian keamanan terkuat sistem — perlu keputusan eksplisit + perubahan
-  `gate.py`, Bab 9, dan mungkin `spek-ai-hybrid.md`. **Belum dikerjakan** (perintah: jangan bangun).
+- Pelonggaran **hanya** untuk `jalur="konsolidasi"`. `Aplikasi.tanya` (`/tanya`) dan endpoint
+  `/penyedia` tetap menolak tier S selamanya.
+- `gate.S` di konfigurasi **diabaikan** — supaya konfigurasi gaya lama tidak jadi pintu belakang.
+- Heuristik tier S **tidak menyalin** `ringkas` episode (vault = repo git, K7). Bila sintesis gagal
+  atau gugur P11, pelajarannya ditulis manusia — sejalan Bab 9.
+
+## 5. Klien yang terhubung
+
+Per 13 Sep 2026: **Claude, Claude Desktop, ChatGPT, ChatGPT Desktop, Gemini, Perplexity.**
+
+Keenamnya bermodel cloud, jadi **tidak satu pun boleh menerima tier S**. Rem 1 menutup mereka lewat
+uji lokalitas `base_url` — bukan lewat daftar nama — supaya klien baru yang ditambahkan nanti tidak
+otomatis lolos. Jalur masuk mereka (ekstensi browser K18/K20/K22, connector MCP K19) tidak berubah.
+
+## 6. Sisa kerja
+
+- Runtime model lokal (Bab 2) — **PARKIR**.
+- `docs/spek-ai-hybrid.md` tidak ada di repo padahal jadi induk definisi gate P/I/S — celah lama.
+- Kalibrasi angka: `AMBANG_RUN_KATA = 5` dan ambang 8 digit dipilih dari contoh nyata, belum diuji
+  terhadap korpus pelajaran sungguhan. Tinjau setelah dua minggu metrik
+  (`rem_tier_s_abstraksi_ditolak` vs total sintesis tier S).

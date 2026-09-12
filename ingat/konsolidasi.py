@@ -14,8 +14,9 @@ import json
 import re
 
 from . import skema
-from .gate import Gate
+from .gate import JALUR_KONSOLIDASI, Gate
 from .obsidian import Vault
+from .rem import periksa_abstraksi
 from .simpan import Store
 from .vektor import kosinus, centroid, tumpang_tindih
 
@@ -74,17 +75,38 @@ class Konsolidator:
     # ---- sintesis -------------------------------------------------------------
     def _sintesis(self, kelompok: list[skema.Episode], tier: str) -> dict:
         utama = max(kelompok, key=lambda e: e.bobot)
-        pid = self.gate.pilih(tier, self.penyedia)
+        bahan = "\n".join(f"- [{e.jenis_kejadian}] {e.ringkas}" for e in kelompok[:12])
+        # Tier S hanya lolos lewat jalur konsolidasi DAN hanya bila keempat rem K28 terpasang.
+        pid = self.gate.pilih(tier, self.penyedia, jalur=JALUR_KONSOLIDASI)
+        if pid and tier == "S" and not self.gate.rem.ada_anggaran(self.store, skema.hitung_token(_PROMPT_SINTESIS + bahan)):
+            self.store.catat_metrik("rem_tier_s_anggaran_habis", 1, penyedia=pid)  # rem 3
+            pid = None
         if pid:
             try:
-                bahan = "\n".join(f"- [{e.jenis_kejadian}] {e.ringkas}" for e in kelompok[:12])
                 jawaban = self.penyedia[pid].tanya(_PROMPT_SINTESIS, f"Kejadian:\n{bahan}", maks_token=400)
                 d = _potong_json(jawaban)
                 if all(d.get(k) for k in ("pelajaran", "pemicu", "tindakan")):
-                    return {"pelajaran": d["pelajaran"].strip(), "pemicu": d["pemicu"].strip(),
-                            "tindakan": d["tindakan"].strip(), "sintesis": f"llm:{pid}"}
+                    hasil = {"pelajaran": d["pelajaran"].strip(), "pemicu": d["pemicu"].strip(),
+                             "tindakan": d["tindakan"].strip(), "sintesis": f"llm:{pid}"}
+                    if tier != "S":
+                        return hasil
+                    # Rem 3: pemakaian dicatat begitu model dipanggil — gagal P11 pun tetap memakan anggaran.
+                    self.gate.rem.catat_pemakaian(self.store, skema.hitung_token(_PROMPT_SINTESIS + bahan + jawaban), pid)
+                    # Rem 2 (P11): yang dijaga adalah KELUARAN, bukan masukan.
+                    lolos, alasan = periksa_abstraksi("\n".join((hasil["pelajaran"], hasil["pemicu"], hasil["tindakan"])), bahan)
+                    if lolos:
+                        return hasil
+                    self.store.catat_metrik("rem_tier_s_abstraksi_ditolak", 1, penyedia=pid, alasan=alasan[:200])
             except Exception as e:  # jatuh ke heuristik, catat
                 self.store.catat_metrik("sintesis_llm_gagal", 1, penyedia=pid, galat=str(e)[:200])
+        if tier == "S":
+            # Bab 9 + P11: isi episode tier S TIDAK BOLEH disalin ke pelajaran — vault adalah repo git (K7),
+            # jadi heuristik "salin ringkas" yang dipakai P/I akan membocorkannya keluar mesin.
+            # Tanpa sintesis abstrak yang lolos, pelajaran tier S ditulis manusia (Bab 9).
+            return {"pelajaran": "Episode tier S belum bisa disintesis secara abstrak; pelajarannya perlu ditulis manusia.",
+                    "pemicu": "Sekelompok episode tier S menunggu penilaian manusia.",
+                    "tindakan": "Buka episodenya lewat buka_bukti() lalu tulis pelajarannya sendiri.",
+                    "sintesis": "heuristik"}
         return {"pelajaran": utama.ringkas.strip(),
                 "pemicu": f"Situasi serupa dengan: {utama.ringkas[:160].strip()}",
                 "tindakan": "Periksa asumsi yang sama sebelum mengulang tindakan serupa; cari jalur verifikasi kedua.",
@@ -100,7 +122,9 @@ class Konsolidator:
     # ---- job utama ------------------------------------------------------------
     def jalankan(self, jalur: str = "batch") -> dict:
         bobot_min = 3 if jalur == "cepat" else 0
-        episodes = self.store.episode_aktif(("P", "I"), bobot_min)
+        # Tier S ikut HANYA bila keempat rem K28 terpasang; kalau tidak, dilewati seperti sebelumnya (Bab 9).
+        tier_diproses = ("P", "I", "S") if self.gate.rem.terbuka() else ("P", "I")
+        episodes = self.store.episode_aktif(tier_diproses, bobot_min)
         laporan = {"jalur": jalur, "episode": len(episodes), "kelompok": 0, "hipotesis_baru": 0,
                    "usulan_baru": 0, "bukti_ditambah": 0, "kontra_ditambah": 0, "dipersempit": 0,
                    "prosedur_draf": 0, "perluasan_lingkup": 0, "didinginkan": 0, "tier_tanpa_penyedia": []}
@@ -165,8 +189,16 @@ class Konsolidator:
                         p.tinjau_ulang = True
                         p.catatan = f"kontra mendominasi ({len(p.kontra)} vs {len(p.bukti)}); domain perlu dipersempit manusia"
 
+            # Pelajaran yang menerima bukti tier S ikut diatur rem K28 selamanya, tidak bisa turun lagi.
+            p.tier_maks = skema.tier_tertinggi([p.tier_maks or "P", tier])
+
             # ambang hipotesis -> usulan (7.2)
-            if p.status == "hipotesis":
+            if p.status == "hipotesis" and p.tier_maks == "S":
+                # K28 rem 4 — manusia penjaga akhir. Berapa pun bobot buktinya, pelajaran turunan
+                # tier S tidak pernah naik status sendiri; ia menunggu penilaian manusia.
+                p.tinjau_ulang = True
+                p.catatan = "tier S: menunggu penilaian manusia (K28 rem 4); tidak naik status otomatis"
+            elif p.status == "hipotesis":
                 bobot = sum(self.store.episode(b).bobot for b in p.bukti if self.store.episode(b))
                 if bobot >= skema.AMBANG_USULAN:
                     self.store.simpan_pelajaran(p)

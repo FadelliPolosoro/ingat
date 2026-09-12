@@ -45,7 +45,10 @@ di Windows PowerShell 5.1 (parse error, bukan galat runtime). Untuk npm pakai `-
 - **Titik tulis episode tunggal**: `Store.tambah_episode` (`ingat/simpan.py`). Redaksi kredensial dan
   penanda tier hidup di sana. Jangan buat jalur tulis lain.
 - **K10**: semua episode tersimpan verbatim termasuk tier S; kredensial diredaksi sebelum tulis; tier S
-  tidak ke LLM (`Gate`), tidak keluar mesin, tidak muncul di `ingat()`/`buka_bukti()` tanpa `sertakan_S=True`.
+  tidak keluar mesin, tidak muncul di `ingat()`/`buka_bukti()` tanpa `sertakan_S=True`.
+- **K28** (spek 9.1, `ingat/rem.py`): tier S boleh ke LLM **hanya** model lokal, **hanya** jalur
+  `konsolidasi`, dan **hanya** bila keempat rem `rem_tier_s` terpasang sekaligus. Gagal-tertutup —
+  tanpa blok itu perilakunya sama persis seperti sebelum K28. Jangan menambah jalur lain ke tier S.
 - Ganti model embedding = `Store(..., bangun_ulang_vektor=True)`; tanpa itu Store menolak dibuka (`IdentitasEmbedderTidakCocok`).
 - Semua perubahan status lewat `Store.ubah_status()`; state machine di `ingat/skema.py` dikunci ke
   `skema/ingat.sql` oleh `uji/uji_kontrak.py`. Ubah salah satu = ubah keduanya + port TS.
