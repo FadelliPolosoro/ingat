@@ -16,6 +16,11 @@ paths: ["src/tangkap/**", "src/simpan/**", "src/sematkan/**"]
   (bukan dari nama penyedia); P11 diperiksa pada **keluaran** model; jalur `/tanya` tetap menolak
   tier S; dan heuristik tier S tidak pernah menyalin `ringkas` episode ke pelajaran (vault = repo git).
   Menambah/melonggarkan rem = tambah uji di `uji/uji_rem_tier_s.py`.
+- **Mode relay (K30, `ingat/relay.py`).** Instans dengan `relay.aktif` adalah pintu masuk BACA-SAJA
+  tier P/I; store otoritatif ada di laptop dan tier S tidak pernah keluar dari sana. Jaminannya
+  bersandar pada **tidak adanya jalur tulis sama sekali**, bukan pada penyaringan tier di relay —
+  jangan menambah endpoint atau tool tulis yang lolos saat `relay.aktif`. Menambah endpoint POST
+  yang mengubah keadaan = daftarkan di `relay.JALUR_TULIS` + uji di `uji/uji_relay.py`.
 - Berkas SQLite dibuat dengan izin 0600. Jangan pernah menulis kunci enkripsi ke repo atau
   menurunkannya dengan satu SHA-256 tanpa KDF.
 - Adapter embedding hanya boleh menghubungi host yang dikonfigurasi eksplisit; default

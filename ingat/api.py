@@ -22,6 +22,7 @@ from urllib.parse import urlparse, parse_qs
 from . import __version__, __penulis__, skema
 from .aplikasi import Aplikasi
 from .gate import GateDitolak
+from .relay import jalur_tulis as relay_jalur_tulis, tolak as relay_tolak
 from .penyedia import PenyediaGagal, daftar_preset
 from .mcp_http import tangani_http as _mcp_http, ambil_token_dari_path, token_cocok
 from .dashboard import bangun_graf
@@ -378,6 +379,9 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
             try:
                 b = self._badan()
                 sesi = b.pop("sesi", None) or self.headers.get("X-Sesi", "")
+                # K30: di relay tidak ada tulis yang mendarat — jadi tier S tidak pernah bisa tiba.
+                if app.relay and relay_jalur_tulis(path):
+                    raise relay_tolak(f"POST {path}")
                 if path == "/episode":
                     # `id` ikut diteruskan: hook Stop memakai id deterministik (`ep-sesi-<sesi>`) supaya
                     # satu sesi menghasilkan SATU episode yang di-upsert, bukan satu episode tiap Stop.

@@ -11,6 +11,7 @@ import sys
 
 from . import __version__, __penulis__
 from .aplikasi import Aplikasi
+from .relay import TOOL_TULIS, tolak as relay_tolak
 
 TOOLS = [
     {"name": "ingat", "description": "L-tarik: ambil memori berperingkat (norma per tanggal, pelajaran, prosedur) dalam lingkup. Wajib: query, lingkup.",
@@ -35,7 +36,17 @@ TOOLS = [
 ]
 
 
+def tools_untuk(app: Aplikasi) -> list[dict]:
+    """Daftar tool yang diiklankan. Di relay (K30) tool tulis tidak ditawarkan sama sekali."""
+    if getattr(app, "relay", False):
+        return [t for t in TOOLS if t["name"] not in TOOL_TULIS]
+    return TOOLS
+
+
 def _panggil(app: Aplikasi, nama: str, arg: dict) -> dict:
+    # Menyembunyikan dari tools/list saja tidak cukup: klien bisa memanggil namanya begitu saja.
+    if getattr(app, "relay", False) and nama in TOOL_TULIS:
+        raise relay_tolak(f"tool '{nama}'")
     if nama == "ingat":
         return app.gateway.ingat(**{k: arg[k] for k in ("query", "lingkup", "jenis", "tanggal_peristiwa", "tugas", "lingkungan", "anggaran_token", "sesi") if k in arg})
     if nama == "muat_startup":
@@ -63,7 +74,7 @@ def tangani_pesan(app: Aplikasi, pesan: dict) -> dict | None:
     if metode == "ping":
         return {"jsonrpc": "2.0", "id": id_, "result": {}}
     if metode == "tools/list":
-        return {"jsonrpc": "2.0", "id": id_, "result": {"tools": TOOLS}}
+        return {"jsonrpc": "2.0", "id": id_, "result": {"tools": tools_untuk(app)}}
     if metode == "tools/call":
         try:
             hasil = _panggil(app, param.get("name", ""), dict(param.get("arguments") or {}))

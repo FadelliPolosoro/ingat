@@ -45,6 +45,10 @@
     ],
     "S": []
   },
+  "relay": {
+    "_catatan": "K30 — nyalakan HANYA di VPS. Relay = pintu masuk BACA-SAJA untuk tier P/I; seluruh jalur tulis (/episode, /metrik, /tanya, /konsolidasi, /sinkron, /instrumen, /prosedur/*/eksekusi) dan tool MCP 'catat_episode' ditolak 403. Store otoritatif ada di laptop. Biarkan false di laptop.",
+    "aktif": false
+  },
   "rem_tier_s": {
     "_catatan": "K28 — empat rem wajib supaya model LOKAL boleh memproses tier S. Gagal-tertutup: keempatnya harus terisi sekaligus, kalau satu kurang tier S tertutup seperti sebelumnya. Hanya berlaku di jalur konsolidasi; /tanya tetap menolak tier S. Penyedia diverifikasi dari base_url-nya (harus loopback/privat/label-tunggal), bukan dari namanya.",
     "aktif": false,

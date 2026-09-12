@@ -21,6 +21,8 @@ KONFIG_DEFAULT = {
     "gate": {"P": [], "I": [], "S": []},
     # K28 — empat rem tier S. Default MATI: tanpa ini tier S tidak pernah ke penyedia mana pun.
     "rem_tier_s": {"aktif": False, "penyedia": [], "anggaran_token_harian": 0, "penjaga": ""},
+    # K30 — mode relay (baca-saja, tier P/I). Default MATI: instans laptop adalah yang otoritatif.
+    "relay": {"aktif": False},
     "penyedia": {},
     "auth": {"allowed_emails": [], "redirect_uri": ""},
     "server": {"host": "127.0.0.1", "port": 8765, "proxy_tepercaya": False, "batas_body": 1_048_576,
@@ -68,6 +70,8 @@ class Aplikasi:
         self.penyedia = mod_penyedia.bangun_penyedia(konfig.get("penyedia"))
         self.gate = Gate(konfig.get("gate"), konfig.get("rem_tier_s"), self.penyedia)
         self.gateway = Gateway(self.store, konfig.get("gateway"))
+        # K30: relay = pintu masuk baca-saja; seluruh jalur tulis ditutup (lihat ingat/relay.py).
+        self.relay = bool((konfig.get("relay") or {}).get("aktif", False))
         self.konsolidator = Konsolidator(self.store, self.gate, self.penyedia, self.vault, konfig.get("konsolidasi"))
 
     # ---- /tanya: konektor keluar dengan memori disuntik --------------------
