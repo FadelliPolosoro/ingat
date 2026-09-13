@@ -28,6 +28,11 @@ def utama(argv: list[str] | None = None) -> int:
     sub.add_parser("sinkron", help="sinkron vault Obsidian -> store")
     sub.add_parser("bangun-ulang-vektor", help="semat ulang semua item dengan penyemat di konfigurasi sekarang "
                                                "(satu-satunya jalan keluar dari IdentitasEmbedderTidakCocok, K8/K9)")
+    e = sub.add_parser("ekspor", help="ekspor semua episode + isi verbatim ke JSON portabel (K30, pindah mesin)")
+    e.add_argument("--keluar", default="-", help="berkas tujuan; '-' = stdout")
+    im = sub.add_parser("impor", help="impor episode dari berkas ekspor ke store ini (K30)")
+    im.add_argument("--berkas", required=True)
+    im.add_argument("--timpa", action="store_true", help="timpa episode ber-id yang sudah ada (default: dilewati)")
     c = sub.add_parser("catat", help="catat episode dari CLI")
     c.add_argument("--isi", required=True)
     c.add_argument("--ringkas", required=True)
@@ -143,6 +148,24 @@ def utama(argv: list[str] | None = None) -> int:
             print(json.dumps(penanya.jawab(a.berkas), ensure_ascii=False, indent=2))
     elif a.perintah == "sinkron":
         print(json.dumps(app.sinkron_vault(), ensure_ascii=False, indent=2))
+    elif a.perintah == "ekspor":
+        from . import pindah
+        data = pindah.ekspor(app.store)
+        if a.keluar == "-":
+            print(json.dumps(data, ensure_ascii=False, indent=2))
+        else:
+            with open(a.keluar, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(json.dumps({"berkas": a.keluar, "jumlah": data["jumlah"], "embedder": data["embedder"]}, ensure_ascii=False))
+    elif a.perintah == "impor":
+        from . import pindah
+        # K30: relay adalah baca-saja — mengimpor episode ke relay melanggar "tier S tak keluar laptop".
+        if app.relay:
+            print(json.dumps({"galat": "instans ini relay (baca-saja, K30); impor episode hanya ke store otoritatif laptop"}, ensure_ascii=False))
+            return 1
+        with open(a.berkas, encoding="utf-8") as f:
+            data = json.load(f)
+        print(json.dumps(pindah.impor(app.store, data, lewati_ada=not a.timpa), ensure_ascii=False, indent=2))
     elif a.perintah == "catat":
         ep = app.store.tambah_episode(a.isi, sumber=a.sumber, tier=a.tier, lingkup=a.lingkup, jenis_kejadian=a.jenis,
                                       ringkas=a.ringkas, instrumen=a.instrumen)

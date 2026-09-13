@@ -29,6 +29,7 @@ di Windows PowerShell 5.1 (parse error, bukan galat runtime). Untuk npm pakai `-
 - `npm run cek-lisensi --prefix port/typescript` — pagar `.claude/rules/lisensi.md` atas dependensi dev.
 - `<py> -m ingat --konfig konfigurasi.json <perintah>` — CLI (lihat `ingat/cli.py`).
 - `… tanya` lalu `… jawab --berkas <path>` — konsolidasi berpandu pertanyaan (v0.5, `ingat/tanya.py`): mesin bertanya dari data, manusia menjawab di blok ```jawab```, jawaban diterapkan ke vault lalu disinkronkan.
+- `… ekspor --keluar <berkas.json>` / `… impor --berkas <berkas.json>` — pindah episode antar mesin (K30, `ingat/pindah.py`): pelajaran/prosedur/norma ikut vault git, tapi episode tidak — ini yang memindahkannya. Impor lewat `tambah_episode` (redaksi jalan ulang), menjaga id/waktu, embedder-agnostik, idempoten. Impor ditolak bila `relay.aktif`.
 - Model embedding: `model/README.md` (Ollama, dibangun sendiri; konfigurasi `embedding.jenis = "ollama"`).
 - Hook Claude Code: `<py> -m ingat pasang [--tulis]`; handler `ingat/tangkap.py` (selalu exit 0; galat ke `<dir_data>/tangkap.log`).
   Penafsir di perintah hook **dideteksi**, bukan disalin dari templat: `pasang.penafsir()` memakai
