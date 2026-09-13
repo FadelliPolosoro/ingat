@@ -1,9 +1,10 @@
-# Peluncur: gantikan proses dengan `python -m ingat --konfig <konfig> mcp`.
-# ingat terpasang editable di Python312 pengguna; store & konfig di ~/.ingat (lokal).
-import os
+# Peluncur MCP ingat untuk Claude Desktop (MCPB).
+# PENTING: jalankan IN-PROCESS, jangan os.execv — di Windows exec = spawn+exit,
+# proses asli keluar -> host MCP kehilangan pipe stdio -> "Server disconnected".
+# Menjalankan utama() di proses ini menjaga stdin/stdout tetap milik host.
 import sys
 
-os.execv(sys.executable, [
-    sys.executable, "-m", "ingat",
-    "--konfig", r"C:\Users\Hi\.ingat\konfigurasi.json", "mcp",
-])
+sys.argv = ["ingat", "--konfig", r"C:\Users\Hi\.ingat\konfigurasi.json", "mcp"]
+from ingat.cli import utama
+
+raise SystemExit(utama())
