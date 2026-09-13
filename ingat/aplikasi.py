@@ -74,6 +74,13 @@ class Aplikasi:
         self.relay = bool((konfig.get("relay") or {}).get("aktif", False))
         self.konsolidator = Konsolidator(self.store, self.gate, self.penyedia, self.vault, konfig.get("konsolidasi"))
 
+    def sinkron_vault(self) -> dict:
+        """Titik tunggal kebijakan sinkron. Di relay (K30) `tier_maks: S` dilewati supaya tak
+        pernah masuk store VPS — dan karena dashboard membaca store, dashboard relay ikut bersih."""
+        if not self.vault:
+            return {"galat": "vault tidak dikonfigurasi"}
+        return self.vault.sinkron(self.store, lewati_tier_s=self.relay)
+
     # ---- /tanya: konektor keluar dengan memori disuntik --------------------
     def tanya(self, penyedia_id: str, pesan: str, lingkup: str, tier: str = "P", tugas: str | None = None,
               lingkungan: dict | None = None, sesi: str = "", catat: bool = True, ukuran_context: int = 128_000) -> dict:

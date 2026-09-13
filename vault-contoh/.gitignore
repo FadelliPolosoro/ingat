@@ -1,0 +1,10 @@
+# K30 — pelajaran/prosedur tier_maks:S ditahan di laptop, TIDAK pernah di-push ke relay VPS.
+# Folder ini diisi mesin (tulis_usulan_*) dan manusia; laptop tetap meng-indeksnya lewat
+# `ingat sinkron`, tapi ia tak pernah masuk git jadi tak pernah sampai ke VPS/dashboard.
+pelajaran/_tier-s/
+prosedur/_tier-s/
+
+# Indeks SQLite (kalau kebetulan dibangun di dalam vault) — selalu bisa dibuang.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

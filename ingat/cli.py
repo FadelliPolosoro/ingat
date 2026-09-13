@@ -142,7 +142,7 @@ def utama(argv: list[str] | None = None) -> int:
         else:
             print(json.dumps(penanya.jawab(a.berkas), ensure_ascii=False, indent=2))
     elif a.perintah == "sinkron":
-        print(json.dumps(app.vault.sinkron(app.store) if app.vault else {"galat": "vault tidak dikonfigurasi"}, ensure_ascii=False, indent=2))
+        print(json.dumps(app.sinkron_vault(), ensure_ascii=False, indent=2))
     elif a.perintah == "catat":
         ep = app.store.tambah_episode(a.isi, sumber=a.sumber, tier=a.tier, lingkup=a.lingkup, jenis_kejadian=a.jenis,
                                       ringkas=a.ringkas, instrumen=a.instrumen)
@@ -171,7 +171,7 @@ def _jadwal(app: Aplikasi, jam: str, ambang: int, interval: int):
         kini = dt.datetime.now()
         if app.vault:
             try:
-                app.vault.sinkron(app.store)
+                app.sinkron_vault()  # K30: di relay, tier_maks:S dilewati
             except Exception as e:
                 print(f"[ingat jadwal] sinkron gagal: {e}")
         aktif = app.store.ringkasan_metrik()["episode_aktif"]

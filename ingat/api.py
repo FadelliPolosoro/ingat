@@ -405,7 +405,7 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                     hasil["kedaluwarsa"] = app.konsolidator.kedaluwarsa()
                     return self._kirim(200, hasil)
                 if path == "/sinkron":
-                    return self._kirim(200, app.vault.sinkron(app.store) if app.vault else {"galat": "vault tidak dikonfigurasi"})
+                    return self._kirim(200, app.sinkron_vault())
                 if path == "/dashboard/data":
                     return self._kirim(200, bangun_graf(app, b.get("lingkup")))
                 if path == "/instrumen":

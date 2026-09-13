@@ -54,7 +54,9 @@ def _terapkan_rantai(store: Store, jenis: str, id_: str, dari: str, ke: str, ala
 class Vault:
     def __init__(self, path: str):
         self.path = path
-        for sub in ("pelajaran/_usulan", "prosedur/_usulan", "norma/_konsolidasi"):
+        # `_tier-s/` (K30): rumah pelajaran/prosedur `tier_maks: S`. Di-gitignore vault → tidak
+        # pernah ikut `git push` ke VPS, jadi tier S tertahan di laptop. Lihat vault-contoh/.gitignore.
+        for sub in ("pelajaran/_usulan", "pelajaran/_tier-s", "prosedur/_usulan", "prosedur/_tier-s", "norma/_konsolidasi"):
             os.makedirs(os.path.join(path, sub), exist_ok=True)
 
     # ---- tulis (hanya _usulan) --------------------------------------------
@@ -66,7 +68,8 @@ class Vault:
                  "- Setuju: pindahkan berkas ini ke folder `pelajaran/` (status naik ke `aturan`).",
                  "- Tolak : isi `veto_manusia: \"<tanggal> — <alasan>\"` (status jadi `ditarik`).",
                  "- Ubah  : sunting `pelajaran`/`pemicu`/`tindakan`/`lingkup` lalu pindahkan."]
-        path = os.path.join(self.path, "pelajaran", "_usulan", f"{p.id}.md")
+        sub = "_tier-s" if getattr(p, "tier_maks", "P") == "S" else "_usulan"  # K30: S tertahan di laptop
+        path = os.path.join(self.path, "pelajaran", sub, f"{p.id}.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write(frontmatter.dump(meta, "\n".join(badan)))
         return path
@@ -77,7 +80,8 @@ class Vault:
                  "## Cara meninjau",
                  "- Jalankan `uji` dulu. Lulus → pindahkan ke `prosedur/` (status `aktif`).",
                  "- Tolak: isi `veto_manusia`."]
-        path = os.path.join(self.path, "prosedur", "_usulan", f"{p.id}.md")
+        sub = "_tier-s" if getattr(p, "tier_maks", "P") == "S" else "_usulan"  # K30
+        path = os.path.join(self.path, "prosedur", sub, f"{p.id}.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write(frontmatter.dump(meta, "\n".join(badan)))
         return path
@@ -107,18 +111,31 @@ class Vault:
                 d[k] = float(d[k])
         return kelas(**d)
 
-    def sinkron(self, store: Store) -> dict:
-        """Vault -> store. Mengembalikan ringkasan perubahan."""
-        laporan = {"pelajaran": 0, "prosedur": 0, "norma": 0, "transisi": [], "galat": []}
+    def sinkron(self, store: Store, lewati_tier_s: bool = False) -> dict:
+        """Vault -> store. Mengembalikan ringkasan perubahan.
 
-        # pelajaran disetujui (folder induk) dan usulan
-        for folder, target in (("pelajaran", "aturan"), ("pelajaran/_usulan", "usulan")):
+        `lewati_tier_s` (K30): bila True, item `tier_maks: S` dilewati dari folder MANA PUN — dipakai
+        relay VPS supaya tier S tak pernah masuk store-nya (backstop, selain penampungan fisik `_tier-s/`).
+        Laptop memakai False → meng-indeks semua, termasuk `_tier-s/`.
+        """
+        laporan = {"pelajaran": 0, "prosedur": 0, "norma": 0, "transisi": [], "galat": [], "dilewati_tier_s": 0}
+
+        # pelajaran: disetujui (folder induk), usulan, dan tier-s (status dari frontmatter, laptop-only)
+        for folder, target in (("pelajaran", "aturan"), ("pelajaran/_usulan", "usulan"), ("pelajaran/_tier-s", None)):
             for path, meta, _ in self._baca_semua(folder):
+                if lewati_tier_s and meta.get("tier_maks") == "S":
+                    laporan["dilewati_tier_s"] += 1
+                    continue
                 try:
                     p = self._bangun(skema.Pelajaran, meta)
                     lama = store.pelajaran(p.id)
                     if p.veto_manusia:
                         p.status = "ditarik"
+                    elif target is None:
+                        # folder `_tier-s`: pakai status apa adanya dari frontmatter, hanya divalidasi
+                        if p.status not in _STATUS_PELAJARAN_VALID:
+                            raise ValueError(f"status '{p.status}' tak sah untuk pelajaran")
+                        p.ditinjau_manusia = p.status in ("aturan", "dipersempit")
                     elif target == "aturan":
                         # manusia memindahkan berkas: status berkas boleh aturan/dipersempit/abadi-like
                         if p.status not in ("aturan", "dipersempit"):
@@ -139,13 +156,20 @@ class Vault:
                 except Exception as e:  # berkas rusak tidak boleh menghentikan sinkron
                     laporan["galat"].append(f"{path}: {e}")
 
-        for folder, target in (("prosedur", "aktif"), ("prosedur/_usulan", "teruji")):
+        for folder, target in (("prosedur", "aktif"), ("prosedur/_usulan", "teruji"), ("prosedur/_tier-s", None)):
             for path, meta, _ in self._baca_semua(folder):
+                if lewati_tier_s and meta.get("tier_maks") == "S":
+                    laporan["dilewati_tier_s"] += 1
+                    continue
                 try:
                     p = self._bangun(skema.Prosedur, meta)
                     lama = store.prosedur(p.id)
                     if p.veto_manusia:
                         p.status = "ditarik"
+                    elif target is None:
+                        if p.status not in _STATUS_PROSEDUR_VALID:
+                            raise ValueError(f"status '{p.status}' tak sah untuk prosedur")
+                        p.ditinjau_manusia = p.status in ("aktif", "dipersempit")
                     elif target == "aktif":
                         if p.status not in ("aktif", "dipersempit"):
                             p.status = "aktif"
