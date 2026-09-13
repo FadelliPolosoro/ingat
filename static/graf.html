@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ingat · Graf</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0d10;color:#e6e8ea;
+    font:13px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  #bar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:14px;
+    padding:0 16px;background:rgba(16,18,22,.82);border-bottom:1px solid #23272e;backdrop-filter:blur(6px);z-index:5}
+  #bar b{font-weight:600}
+  #bar .redup{color:#9aa3ad}
+  #bar a,#bar button{color:#cdd3da;background:#181b20;border:1px solid #2a2f36;border-radius:8px;
+    padding:5px 11px;text-decoration:none;font:inherit;cursor:pointer}
+  #bar a:hover,#bar button:hover{border-color:#5b8cff}
+  .legenda{display:flex;gap:12px;margin-left:auto;color:#9aa3ad}
+  .legenda span{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  canvas{display:block;position:fixed;top:46px;left:0}
+  #tip{position:fixed;pointer-events:none;z-index:6;background:#12151a;border:1px solid #2a2f36;
+    border-radius:8px;padding:7px 10px;max-width:320px;font-size:12px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  #tip .j{color:#9aa3ad;text-transform:uppercase;font-size:10px;letter-spacing:.5px}
+  #muat{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#9aa3ad}
+</style>
+</head>
+<body>
+<div id="bar">
+  <b>ingat · Graf</b>
+  <a href="/">← Monitor</a>
+  <button id="panas">Panaskan</button>
+  <button id="pas">Pas layar</button>
+  <button id="lepas">Tampilkan semua</button>
+  <span class="redup" id="hitung">memuat…</span>
+  <div class="legenda">
+    <span><i class="dot" style="background:#6b7280"></i>episode</span>
+    <span><i class="dot" style="background:#3b82f6"></i>pelajaran</span>
+    <span><i class="dot" style="background:#14b8a6"></i>prosedur</span>
+    <span><i class="dot" style="background:#f59e0b"></i>norma</span>
+    <span><i class="dot" style="background:#a855f7"></i>instrumen</span>
+  </div>
+</div>
+<div id="muat">memuat graf…</div>
+<canvas id="c"></canvas>
+<div id="tip"></div>
+<script>
+"use strict";
+const WARNA = {episode:"#6b7280", pelajaran:"#3b82f6", prosedur:"#14b8a6", norma:"#f59e0b", instrumen:"#a855f7"};
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const tip = document.getElementById("tip");
+let W=0, H=0, DPR=Math.min(2, window.devicePixelRatio||1);
+let nodes=[], edges=[], byId={};
+let scale=1, tx=0, ty=0, alpha=1, sudahPas=false, fitFrame=0;
+let drag=null, pan=null, hover=null;
+
+function ukur(){
+  W=innerWidth; H=innerHeight-46;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener("resize", ukur); ukur();
+
+let mentah={nodes:[],edges:[]}, lepas=false, mulai=false;
+
+async function muat(){
+  try { mentah = await (await fetch("/graf/data",{cache:"no-store"})).json(); }
+  catch(e){ document.getElementById("muat").textContent="gagal memuat: "+e.message; return; }
+  document.getElementById("muat").style.display="none";
+  bangun();
+  if(!mulai){ mulai=true; requestAnimationFrame(langkah); }
+}
+
+// Episode tanpa tautan bukti = "lepas". Default disembunyikan: 266 titik tak tertaut hanya jadi
+// debu yang merusak tata letak (Obsidian pun menyaring orphan). Tombol untuk menampilkannya.
+function bangun(){
+  const deg={};
+  (mentah.edges||[]).forEach(e=>{ deg[e.a]=(deg[e.a]||0)+1; deg[e.b]=(deg[e.b]||0)+1; });
+  const pakai=(mentah.nodes||[]).filter(n => lepas || n.jenis!=="episode" || (deg[n.id]||0)>0);
+  nodes = pakai.map((n,i)=>{                       // phyllotaxis persis d3 initializeNodes
+    const R=10*Math.sqrt(0.5+i), A=i*Math.PI*(3-Math.sqrt(5));
+    return {...n, x:R*Math.cos(A), y:R*Math.sin(A), vx:0, vy:0,
+            deg:deg[n.id]||0, r:(n.jenis==="episode"?3:4.5)+Math.sqrt(deg[n.id]||0)*1.6};
+  });
+  byId={}; nodes.forEach(n=>byId[n.id]=n);
+  edges = (mentah.edges||[]).filter(e=>byId[e.a]&&byId[e.b]).map(e=>{
+    const da=deg[e.a]||1, db=deg[e.b]||1;          // kuat=1/min(derajat), bias=deg(a)/(deg a+deg b)
+    return {...e, kuat:1/Math.min(da,db), bias:da/(da+db)};
+  });
+  const tersembunyi=(mentah.nodes||[]).length-nodes.length;
+  document.getElementById("hitung").textContent =
+    nodes.length+" node · "+edges.length+" tautan"+(tersembunyi?` · ${tersembunyi} episode lepas disembunyikan`:"");
+  document.getElementById("lepas").textContent = lepas ? "Sembunyikan lepas" : "Tampilkan semua";
+  scale=1; tx=W/2; ty=H/2;
+  selesaikan();
+}
+
+// Hitung tata letak SEKALIGUS, sinkron — pola d3 untuk layout statis: `simulation.tick(300)`.
+// Alasan: requestAnimationFrame di-throttle berat saat panel/tab tidak aktif (terukur: hanya ~7
+// tick dalam 8 detik), sehingga simulasi berbasis rAF tak pernah dingin dan auto-fit tak jalan.
+function selesaikan(){
+  alpha=1;
+  for(let i=0;i<300 && alpha>ALPHA_MIN;i++) tick();
+  pasView(); sudahPas=true; fitFrame=0;   // fit diulang di frame render pertama (posisi final)
+}
+
+function pasView(){
+  if(!nodes.length) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const n of nodes){ x0=Math.min(x0,n.x); y0=Math.min(y0,n.y); x1=Math.max(x1,n.x); y1=Math.max(y1,n.y); }
+  const gw=(x1-x0)||1, gh=(y1-y0)||1, pad=80;
+  scale=Math.max(0.15, Math.min(1.6, Math.min((W-pad)/gw, (H-pad)/gh)));
+  tx=W/2 - ((x0+x1)/2)*scale; ty=H/2 - ((y0+y1)/2)*scale;
+}
+
+// ---- Fisika: port setia dari d3-force (integrasi velocity Verlet).
+// Rujukan: d3/d3-force src/manyBody.js, src/link.js, src/simulation.js.
+// KUNCI yang dulu hilang: klem distanceMin2. Tanpa itu, dua node nyaris berimpit (l ~ 1e-9)
+// menghasilkan gaya ~tak hingga -> simulasi meledak ke koordinat ribuan di tick awal.
+const ALPHA_MIN=0.001, ALPHA_DECAY=1-Math.pow(ALPHA_MIN,1/300), VEL_DECAY=0.6;
+const MUATAN=-220;         // forceManyBody strength (d3 default -30; graf ini perlu lebih renggang)
+const DMIN2=1, DMAX2=1e7;  // distanceMin=1 (default d3); distanceMax demi kinerja
+const PANJANG=42;          // forceLink distance (d3 default 30)
+const goyang=()=>(Math.random()-0.5)*1e-6;   // jiggle(): arah acak saat komponen tepat 0
+
+function tick(){
+  alpha += (0 - alpha) * ALPHA_DECAY;
+  // gaya muatan (many-body), O(n^2) — cukup untuk ratusan node, tanpa Barnes-Hut
+  for(let i=0;i<nodes.length;i++){
+    const a=nodes[i];
+    for(let j=i+1;j<nodes.length;j++){
+      const b=nodes[j];
+      let x=b.x-a.x, y=b.y-a.y, l=x*x+y*y;
+      if(x===0){ x=goyang(); l+=x*x; }
+      if(y===0){ y=goyang(); l+=y*y; }
+      if(l>DMAX2) continue;
+      if(l<DMIN2) l=Math.sqrt(DMIN2*l);        // <-- klem anti-ledakan (d3 manyBody.js)
+      const w=MUATAN*alpha/l;                  // gaya pakai delta mentah, bukan vektor satuan
+      a.vx+=x*w; a.vy+=y*w; b.vx-=x*w; b.vy-=y*w;
+    }
+  }
+  // gaya tautan: kekuatan 1/min(derajat) & bias derajat — hub tak terkoyak (d3 link.js)
+  for(const e of edges){
+    const s=byId[e.a], t=byId[e.b];
+    let x=t.x+t.vx-s.x-s.vx, y=t.y+t.vy-s.y-s.vy;
+    if(x===0) x=goyang();
+    if(y===0) y=goyang();
+    const d=Math.sqrt(x*x+y*y), l=(d-PANJANG)/d*alpha*e.kuat;
+    x*=l; y*=l;
+    t.vx-=x*e.bias; t.vy-=y*e.bias;
+    s.vx+=x*(1-e.bias); s.vy+=y*(1-e.bias);
+  }
+  // forceX/forceY (d3, strength default 0.1). WAJIB: tanpa penarik posisi ini, node yang tidak
+  // punya tautan hanya menerima gaya tolak -> melayang tak terbatas, bbox meledak, fit jadi nol.
+  for(const n of nodes){ n.vx += (0-n.x)*0.1*alpha; n.vy += (0-n.y)*0.1*alpha; }
+  // integrasi Verlet: posisi += kecepatan teredam (alpha sudah masuk di gaya)
+  for(const n of nodes){
+    if(n===drag){ n.vx=n.vy=0; continue; }
+    n.x += n.vx *= VEL_DECAY;
+    n.y += n.vy *= VEL_DECAY;
+  }
+  // forceCenter: geser centroid ke (0,0) tiap tick -> graf tak pernah melayang keluar layar
+  let sx=0, sy=0;
+  for(const n of nodes){ sx+=n.x; sy+=n.y; }
+  sx/=nodes.length; sy/=nodes.length;
+  for(const n of nodes){ n.x-=sx; n.y-=sy; }
+}
+
+function gambar(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save(); ctx.translate(tx,ty); ctx.scale(scale,scale);
+  ctx.lineWidth=0.6/scale; ctx.strokeStyle="rgba(150,160,175,0.22)";
+  ctx.beginPath();
+  for(const e of edges){ const a=byId[e.a], b=byId[e.b]; ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); }
+  ctx.stroke();
+  for(const n of nodes){
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.2832);
+    ctx.fillStyle = WARNA[n.jenis]||"#8892a0"; ctx.fill();
+    if(n===hover){ ctx.lineWidth=1.5/scale; ctx.strokeStyle="#fff"; ctx.stroke(); }
+  }
+  // label untuk hub (derajat tinggi) + yang di-hover
+  ctx.fillStyle="#c9d1d9"; ctx.font=(11/scale)+"px system-ui"; ctx.textAlign="center";
+  for(const n of nodes){
+    if(n===hover || (n.jenis!=="episode" && n.deg>=3) || n.deg>=8){
+      ctx.fillText((n.label||n.id).slice(0,28), n.x, n.y - n.r - 3/scale);
+    }
+  }
+  ctx.restore();
+}
+
+// rAF hanya untuk menggambar + respons saat node ditarik (tata letak sudah selesai di selesaikan()).
+function langkah(){
+  if(drag || alpha>ALPHA_MIN) tick();
+  // Fit ulang pada beberapa frame render pertama: menjamin skala/geser dihitung dari posisi
+  // yang benar-benar final, bukan dari keadaan antara saat tata letak masih dihitung.
+  if(fitFrame<3 && !drag){ pasView(); fitFrame++; }
+  gambar(); requestAnimationFrame(langkah);
+}
+
+// ---- interaksi
+function keDunia(mx,my){ return {x:(mx-tx)/scale, y:(my-46-ty)/scale}; }
+function cari(mx,my){
+  const w=keDunia(mx,my); let best=null, bd=1e9;
+  for(const n of nodes){ const dx=n.x-w.x, dy=n.y-w.y; const d=dx*dx+dy*dy; const R=(n.r+4);
+    if(d<R*R && d<bd){ bd=d; best=n; } }
+  return best;
+}
+cv.addEventListener("mousedown",ev=>{
+  const n=cari(ev.clientX,ev.clientY);
+  if(n){ drag=n; } else { pan={x:ev.clientX-tx, y:ev.clientY-ty}; }
+});
+addEventListener("mousemove",ev=>{
+  if(drag){ const w=keDunia(ev.clientX,ev.clientY); drag.x=w.x; drag.y=w.y; drag.vx=drag.vy=0; alpha=Math.max(alpha,0.3); return; }
+  if(pan){ tx=ev.clientX-pan.x; ty=ev.clientY-pan.y; return; }
+  const n=cari(ev.clientX,ev.clientY); hover=n;
+  if(n){ tip.style.display="block"; tip.style.left=(ev.clientX+12)+"px"; tip.style.top=(ev.clientY+12)+"px";
+    tip.innerHTML=`<div class="j">${n.jenis}</div>${(n.label||n.id).replace(/</g,"&lt;")}`+
+      (n.meta?`<div class="j" style="margin-top:3px">${n.meta.replace(/</g,"&lt;")}</div>`:""); }
+  else tip.style.display="none";
+});
+addEventListener("mouseup",()=>{ drag=null; pan=null; });
+cv.addEventListener("wheel",ev=>{
+  ev.preventDefault(); const f=ev.deltaY<0?1.12:0.89; const mx=ev.clientX, my=ev.clientY-46;
+  const wx=(mx-tx)/scale, wy=(my-ty)/scale; scale=Math.max(0.08,Math.min(4,scale*f));
+  tx=mx-wx*scale; ty=my-wy*scale;
+},{passive:false});
+document.getElementById("panas").onclick=()=>{ selesaikan(); };
+document.getElementById("pas").onclick=pasView;
+document.getElementById("lepas").onclick=()=>{ lepas=!lepas; bangun(); };
+muat();
+</script>
+</body>
+</html>

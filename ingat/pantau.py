@@ -16,7 +16,9 @@ import webbrowser
 from . import __version__
 from .aplikasi import Aplikasi
 
-_HTML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "pantau.html")
+_STATIK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+_HTML = os.path.join(_STATIK, "pantau.html")
+_GRAF = os.path.join(_STATIK, "graf.html")
 
 
 def snapshot(app: Aplikasi) -> dict:
@@ -31,6 +33,24 @@ def snapshot(app: Aplikasi) -> dict:
     }
 
 
+def graf(app: Aplikasi) -> dict:
+    """Graf force-directed: node curated (pelajaran/prosedur/norma/instrumen) dari `bangun_graf`
+    PLUS episode sebagai node kecil, dihubungkan ke pelajaran/prosedur yang memakainya sebagai bukti.
+    Episode membuat graf padat (mirip Obsidian). Hanya label ringkas — bukan isi verbatim."""
+    from .dashboard import bangun_graf
+    g = bangun_graf(app)
+    id_ep = set()
+    for e in app.store.episode_semua():
+        g["nodes"].append({"id": e.id, "jenis": "episode", "label": (e.ringkas or e.id)[:48],
+                           "lingkup": e.lingkup, "meta": f"episode · {e.jenis_kejadian} · {e.lingkup}"})
+        id_ep.add(e.id)
+    for p in list(app.store.pelajaran_semua()) + list(app.store.prosedur_semua()):
+        for b in (getattr(p, "bukti", None) or []):
+            if b in id_ep:
+                g["edges"].append({"a": p.id, "b": b, "jenis": "bukti"})
+    return g
+
+
 def _buat_handler(app: Aplikasi):
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *a):  # senyap: hindari bising + kebocoran path ke konsol (K10)
@@ -43,17 +63,25 @@ def _buat_handler(app: Aplikasi):
             self.end_headers()
             self.wfile.write(isi)
 
+        def _html(self, jalur: str, nama: str):
+            try:
+                with open(jalur, "rb") as f:
+                    return self._kirim(200, "text/html; charset=utf-8", f.read())
+            except FileNotFoundError:
+                return self._kirim(404, "application/json; charset=utf-8",
+                                   f'{{"galat": "static/{nama} tidak ditemukan"}}'.encode("utf-8"))
+
         def do_GET(self):
             if self.path == "/data":
                 isi = json.dumps(snapshot(app), ensure_ascii=False).encode("utf-8")
                 return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path == "/graf/data":
+                isi = json.dumps(graf(app), ensure_ascii=False).encode("utf-8")
+                return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path in ("/graf", "/graf/"):
+                return self._html(_GRAF, "graf.html")
             if self.path in ("/", "/pantau", "/pantau/"):
-                try:
-                    with open(_HTML, "rb") as f:
-                        return self._kirim(200, "text/html; charset=utf-8", f.read())
-                except FileNotFoundError:
-                    return self._kirim(404, "application/json; charset=utf-8",
-                                       b'{"galat": "static/pantau.html tidak ditemukan"}')
+                return self._html(_HTML, "pantau.html")
             return self._kirim(404, "application/json; charset=utf-8", b'{"galat": "tidak ada"}')
 
     return Handler

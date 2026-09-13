@@ -58,6 +58,18 @@ class UjiPantau(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
 
+    def test_graf_menyertakan_episode_dan_tautan_bukti(self):
+        ep = self.app.store.tambah_episode("bukti x", sumber="uji", tier="I", lingkup="global",
+                                           jenis_kejadian="sukses", ringkas="bukti x")
+        self.app.store.simpan_pelajaran(skema.Pelajaran(
+            id="pl-2", pelajaran="p", pemicu="q", tindakan="r", lingkup="global", bukti=[ep.id]))
+        g = pantau.graf(self.app)
+        ids = {n["id"] for n in g["nodes"]}
+        self.assertIn(ep.id, ids, "episode harus jadi node (yang membuat graf padat)")
+        self.assertIn("pl-2", ids)
+        self.assertTrue(any(e["a"] == "pl-2" and e["b"] == ep.id and e["jenis"] == "bukti"
+                            for e in g["edges"]), "pelajaran -> episode buktinya harus jadi tautan")
+
     def test_tolak_host_non_loopback(self):
         # tanpa auth -> hanya loopback. Host publik harus ditolak SEBELUM bind/buka browser.
         kode = pantau.layani_pantau(self.app, host="0.0.0.0", port=8790, buka=False)
