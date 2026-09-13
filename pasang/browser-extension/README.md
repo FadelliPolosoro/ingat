@@ -35,6 +35,17 @@ endpoint yang sama dipakai hook Claude Code) — tidak pernah ke server pihak ke
 5. Untuk ChatGPT: coba dulu tanpa mengisi selektor manual (sudah ada bawaan). Untuk Claude/Gemini/DeepSeek/Kimi/Perplexity:
    ikuti langkah 3 di atas.
 
+## Menemukan selektor tanpa menebak (`deteksi-selektor.js`)
+
+Untuk 4 situs yang selektornya kosong (Claude.ai/Gemini/Perplexity/DeepSeek/Kimi), selain picker
+ada alat bantu: buka situsnya (login, satu percakapan berisi pesanmu + jawaban AI), tekan F12 →
+Console → tempel seluruh isi `deteksi-selektor.js`. Ia **mengukur** kandidat selektor terhadap DOM
+nyata di halamanmu (bukan menebak), mencetak tabel cocok/berteks/contoh, merekomendasikan yang sehat,
+lalu mencetak perintah `chrome.storage.sync.set(...)` siap-tempel (dijalankan di Console **halaman Opsi
+ekstensi**, bukan di situs). Hanya membaca DOM. Kandidat awal: Gemini `user-query`/`model-response`/
+`rich-textarea .ql-editor`; Perplexity `compose = [contenteditable="true"][role="textbox"]` (diverifikasi
+di halaman guest 13 Sep 2026) — balon user/assistant-nya diverifikasi lewat skrip ini di sesi loginmu.
+
 ## Cara kerja singkat
 
 - Satu episode per **percakapan**, dikirim saat idle 90 detik atau tab ditutup/disembunyikan — bukan satu
