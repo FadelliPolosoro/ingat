@@ -11,7 +11,26 @@ from . import __version__, __penulis__, skema
 from .aplikasi import Aplikasi, muat_konfig
 
 
+def _paksa_stdout_utf8() -> None:
+    """Paksa stdout/stderr ke UTF-8 supaya json.dumps(ensure_ascii=False) tidak
+    jatuh di konsol Windows (cp1252) saat keluaran memuat karakter non-cp1252,
+    mis. bendera '⚑' dari hasil `ingat ingat`. Berlaku untuk SEMUA perintah
+    yang mencetak json.dumps, bukan satu perintah saja.
+
+    Di uji, stdout diganti io.StringIO yang tidak punya .reconfigure -> dilewati.
+    """
+    for aliran in (sys.stdout, sys.stderr):
+        rekonf = getattr(aliran, "reconfigure", None)
+        if rekonf is None:
+            continue
+        try:
+            rekonf(encoding="utf-8")
+        except (ValueError, OSError):
+            pass
+
+
 def utama(argv: list[str] | None = None) -> int:
+    _paksa_stdout_utf8()
     p = argparse.ArgumentParser(prog="ingat", description=f"ingat v{__version__} — sistem memori agent · dibuat oleh {__penulis__}")
     p.add_argument("--konfig", help="path konfigurasi.json (default: env INGAT_KONFIG atau ./konfigurasi.json)")
     sub = p.add_subparsers(dest="perintah", required=True)
