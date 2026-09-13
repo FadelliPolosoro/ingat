@@ -52,6 +52,10 @@ def utama(argv: list[str] | None = None) -> int:
     im = sub.add_parser("impor", help="impor episode dari berkas ekspor ke store ini (K30)")
     im.add_argument("--berkas", required=True)
     im.add_argument("--timpa", action="store_true", help="timpa episode ber-id yang sudah ada (default: dilewati)")
+    ic = sub.add_parser("impor-claude", help="impor 'chat terdahulu' Claude Code dari transkrip lokal ~/.claude/projects (Jalur A, tanpa ekspor)")
+    ic.add_argument("--dir", default=None, help="folder transkrip (default: ~/.claude/projects)")
+    ic.add_argument("--lingkup", default=None, help="paksa lingkup untuk semua (mis. peran:asisten-ai); default: per-proyek dari cwd transkrip")
+    ic.add_argument("--tulis", action="store_true", help="benar-benar tulis (default: kering — cetak rencana saja)")
     c = sub.add_parser("catat", help="catat episode dari CLI")
     c.add_argument("--isi", required=True)
     c.add_argument("--ringkas", required=True)
@@ -189,6 +193,9 @@ def utama(argv: list[str] | None = None) -> int:
         with open(a.berkas, encoding="utf-8") as f:
             data = json.load(f)
         print(json.dumps(pindah.impor(app.store, data, lewati_ada=not a.timpa), ensure_ascii=False, indent=2))
+    elif a.perintah == "impor-claude":
+        from .impor_claude import impor_histori
+        print(json.dumps(impor_histori(app, root=a.dir, tulis=a.tulis, lingkup_paksa=a.lingkup), ensure_ascii=False, indent=2))
     elif a.perintah == "catat":
         ep = app.store.tambah_episode(a.isi, sumber=a.sumber, tier=a.tier, lingkup=a.lingkup, jenis_kejadian=a.jenis,
                                       ringkas=a.ringkas, instrumen=a.instrumen)
