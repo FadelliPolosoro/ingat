@@ -6,8 +6,11 @@
   "description": "Server MCP memori ingat lokal: ambil (ingat/muat_startup/buka_bukti) + catat episode.",
   "author": { "name": "Fadelli Polosoro" },
   "server": {
-    "type": "stdio",
-    "command": "C:\\Users\\Hi\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
-    "args": ["-m", "ingat", "--konfig", "C:\\Users\\Hi\\.ingat\\konfigurasi.json", "mcp"]
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "C:\\Users\\Hi\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "args": ["${__dirname}/server/main.py"]
+    }
   }
 }
