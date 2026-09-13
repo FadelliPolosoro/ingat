@@ -6,59 +6,93 @@
 <title>ingat · Monitor</title>
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --tepi:#e3e6ea; --teks:#1c2024; --redup:#6b7280;
+    --bg:#f6f7f9; --panel:#ffffff; --panel2:#fbfcfd; --tepi:#e3e6ea; --tepi2:#eef1f4;
+    --teks:#1c2024; --redup:#6b7280; --samar:#9aa1ab;
     --aksen:#2563eb; --ok:#16a34a; --hati:#d97706; --bahaya:#dc2626; --dingin:#0891b2;
-    --bayang:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+    --bayang:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+    --bayang-naik:0 6px 16px rgba(17,24,39,.10), 0 2px 4px rgba(17,24,39,.06);
+    --r:12px;
   }
   @media (prefers-color-scheme:dark){
-    :root{ --bg:#0f1114; --panel:#181b1f; --tepi:#2a2f36; --teks:#e6e8ea; --redup:#9aa3ad;
+    :root{ --bg:#0e1013; --panel:#181b1f; --panel2:#1d2126; --tepi:#2a2f36; --tepi2:#22262c;
+      --teks:#e6e8ea; --redup:#9aa3ad; --samar:#6b7480;
       --aksen:#5b8cff; --ok:#4ade80; --hati:#fbbf24; --bahaya:#f87171; --dingin:#38bdf8;
-      --bayang:0 1px 3px rgba(0,0,0,.4);}
+      --bayang:0 1px 2px rgba(0,0,0,.4); --bayang-naik:0 8px 24px rgba(0,0,0,.5);}
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--teks);
+  body{margin:0;background:var(--bg);color:var(--teks);-webkit-font-smoothing:antialiased;
     font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
-  header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 20px;
-    border-bottom:1px solid var(--tepi);background:var(--panel);position:sticky;top:0;z-index:5}
-  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
-  .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--tepi)}
-  .badge.otoritatif{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
-  .badge.relay{color:var(--dingin);border-color:color-mix(in srgb,var(--dingin) 40%,transparent)}
-  .sisa{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--redup);font-size:12px}
-  .titik{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:5px}
-  .titik.mati{background:var(--bahaya)}
-  button{font:inherit;cursor:pointer;background:var(--panel);color:var(--teks);
-    border:1px solid var(--tepi);border-radius:8px;padding:5px 12px}
-  button:hover{border-color:var(--aksen)}
-  main{max-width:1100px;margin:0 auto;padding:20px}
-  .kabar{margin-bottom:16px}
-  .lonceng{padding:12px 16px;border-radius:10px;margin-bottom:8px;font-weight:500;
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px;
+    border-bottom:1px solid var(--tepi);background:color-mix(in srgb,var(--panel) 88%,transparent);
+    backdrop-filter:saturate(1.4) blur(8px);position:sticky;top:0;z-index:5}
+  header h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:7px}
+  header h1::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--aksen);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--aksen) 22%,transparent)}
+  .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--tepi);
+    color:var(--redup);white-space:nowrap}
+  .badge.otoritatif{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);
+    background:color-mix(in srgb,var(--ok) 9%,transparent)}
+  .badge.relay{color:var(--dingin);border-color:color-mix(in srgb,var(--dingin) 40%,transparent);
+    background:color-mix(in srgb,var(--dingin) 9%,transparent)}
+  .sisa{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:var(--redup);font-size:12px}
+  .status{display:inline-flex;align-items:center;gap:6px}
+  .titik{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+  .titik.mati{background:var(--bahaya);box-shadow:0 0 0 3px color-mix(in srgb,var(--bahaya) 22%,transparent)}
+  #waktu.denyut{animation:denyut .6s ease}
+  @keyframes denyut{0%{color:var(--aksen)}100%{color:var(--redup)}}
+  @media (prefers-reduced-motion:reduce){#waktu.denyut{animation:none}}
+  .tombol{font:inherit;font-size:12px;cursor:pointer;background:var(--panel);color:var(--teks);
+    border:1px solid var(--tepi);border-radius:8px;padding:6px 12px;text-decoration:none;
+    display:inline-flex;align-items:center;gap:5px;transition:border-color .15s, background .15s, transform .05s}
+  .tombol:hover{border-color:var(--aksen);background:var(--panel2)}
+  .tombol:active{transform:translateY(1px)}
+  :focus-visible{outline:2px solid var(--aksen);outline-offset:2px;border-radius:8px}
+  main{max-width:1120px;margin:0 auto;padding:22px 20px}
+  .kabar{margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
+  .lonceng{padding:12px 15px;border-radius:10px;font-weight:500;line-height:1.45;
     border:1px solid transparent;display:flex;gap:10px;align-items:flex-start}
-  .lonceng.bahaya{background:color-mix(in srgb,var(--bahaya) 12%,var(--panel));border-color:color-mix(in srgb,var(--bahaya) 35%,transparent);color:var(--bahaya)}
-  .lonceng.hati{background:color-mix(in srgb,var(--hati) 12%,var(--panel));border-color:color-mix(in srgb,var(--hati) 35%,transparent);color:var(--hati)}
-  .lonceng.tenang{background:color-mix(in srgb,var(--ok) 10%,var(--panel));border-color:color-mix(in srgb,var(--ok) 30%,transparent);color:var(--ok)}
-  .kartu-baris{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
-  .kartu{background:var(--panel);border:1px solid var(--tepi);border-radius:12px;padding:14px 16px;box-shadow:var(--bayang)}
-  .kartu .angka{font-size:30px;font-weight:680;line-height:1.1;letter-spacing:-.5px}
-  .kartu .judul{color:var(--redup);font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.4px}
-  .kartu .imbuh{color:var(--redup);font-size:12px;margin-top:6px}
+  .lonceng b{font-weight:650}
+  .lonceng.bahaya{background:color-mix(in srgb,var(--bahaya) 12%,var(--panel));border-color:color-mix(in srgb,var(--bahaya) 32%,transparent);color:var(--bahaya)}
+  .lonceng.hati{background:color-mix(in srgb,var(--hati) 12%,var(--panel));border-color:color-mix(in srgb,var(--hati) 32%,transparent);color:var(--hati)}
+  .lonceng.tenang{background:color-mix(in srgb,var(--ok) 10%,var(--panel));border-color:color-mix(in srgb,var(--ok) 28%,transparent);color:var(--ok)}
+  .lonceng.info{background:var(--panel);border-color:var(--tepi);color:var(--redup)}
+  .kartu-baris{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:20px}
+  .kartu{position:relative;background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);
+    padding:15px 16px;box-shadow:var(--bayang);transition:transform .12s, box-shadow .12s, border-color .12s;overflow:hidden}
+  .kartu:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik);border-color:color-mix(in srgb,var(--tepi) 40%,var(--aksen))}
+  .kartu.utama::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--aksen)}
+  .kartu .angka{font-size:31px;font-weight:680;line-height:1.05;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+  .kartu .judul{color:var(--redup);font-size:11.5px;margin-top:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .kartu .imbuh{color:var(--samar);font-size:12px;margin-top:7px}
+  .kartu .imbuh.peringatan{color:var(--hati)}
   .panel-baris{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:720px){.panel-baris{grid-template-columns:1fr}}
-  .panel{background:var(--panel);border:1px solid var(--tepi);border-radius:12px;padding:16px 18px;box-shadow:var(--bayang)}
-  .panel h2{font-size:13px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.5px;color:var(--redup)}
-  .rincian{display:flex;flex-direction:column;gap:10px}
-  .rinci{display:grid;grid-template-columns:110px 1fr 38px;align-items:center;gap:10px;font-size:13px}
+  @media(max-width:760px){.panel-baris{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);padding:16px 18px;box-shadow:var(--bayang)}
+  .panel h2{font-size:12px;margin:0 0 15px;text-transform:uppercase;letter-spacing:.6px;color:var(--redup);font-weight:650}
+  .rincian{display:flex;flex-direction:column;gap:11px}
+  .rinci{display:grid;grid-template-columns:104px 1fr 40px;align-items:center;gap:11px;font-size:13px}
+  @media(max-width:400px){.rinci{grid-template-columns:88px 1fr 34px;gap:8px}}
   .rinci .nama{color:var(--redup);text-transform:capitalize}
-  .rinci .nilai{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-  .bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--redup) 18%,transparent);overflow:hidden}
-  .bar>span{display:block;height:100%;border-radius:999px}
-  .s-hipotesis>span,.s-draf>span{background:var(--redup)}
+  .rinci .nilai{text-align:right;font-variant-numeric:tabular-nums;font-weight:650}
+  .rinci .nilai.nol{color:var(--samar);font-weight:500}
+  .bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--redup) 16%,transparent);overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  .s-hipotesis>span,.s-draf>span{background:var(--samar)}
   .s-usulan>span,.s-teruji>span{background:var(--aksen)}
   .s-aturan>span,.s-aktif>span{background:var(--ok)}
   .s-dipersempit>span{background:var(--hati)}
   .s-ditarik>span{background:var(--bahaya)}
-  footer{max-width:1100px;margin:0 auto;padding:8px 20px 28px;color:var(--redup);font-size:12px}
-  code{background:color-mix(in srgb,var(--redup) 14%,transparent);padding:1px 5px;border-radius:5px;font-size:12px}
+  /* rangka-muat (skeleton) saat data pertama belum tiba */
+  .rangka{background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);height:88px;
+    box-shadow:var(--bayang);position:relative;overflow:hidden}
+  .rangka::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--redup) 10%,transparent),transparent);
+    transform:translateX(-100%);animation:geser 1.3s infinite}
+  @keyframes geser{100%{transform:translateX(100%)}}
+  @media (prefers-reduced-motion:reduce){.rangka::after{animation:none}}
+  footer{max-width:1120px;margin:0 auto;padding:10px 20px 30px;color:var(--samar);font-size:12px}
+  code{background:color-mix(in srgb,var(--redup) 13%,transparent);padding:1px 5px;border-radius:5px;font-size:12px;color:var(--redup)}
 </style>
 </head>
 <body>
@@ -67,16 +101,19 @@
   <span id="mode" class="badge">…</span>
   <span id="embed" class="badge" title="embedder">…</span>
   <div class="sisa">
-    <span id="status"><span class="titik" id="titik"></span><span id="statusteks">menghubungkan…</span></span>
-    <span id="waktu">—</span>
-    <a href="/graf" style="text-decoration:none;color:var(--teks);border:1px solid var(--tepi);border-radius:8px;padding:5px 12px">◕ Graf</a>
-    <button id="jeda">⏸ Jeda</button>
-    <button id="segar">↻ Segarkan</button>
+    <span class="status" id="status"><span class="titik" id="titik"></span><span id="statusteks">menghubungkan…</span></span>
+    <span id="waktu" aria-live="polite">—</span>
+    <a class="tombol" href="/graf" aria-label="Buka tampilan graf">◕ Graf</a>
+    <button class="tombol" id="jeda" aria-label="Jeda pembaruan otomatis">⏸ Jeda</button>
+    <button class="tombol" id="segar" aria-label="Segarkan sekarang">↻ Segarkan</button>
   </div>
 </header>
 <main>
-  <div class="kabar" id="kabar"></div>
-  <div class="kartu-baris" id="kartu-utama"></div>
+  <div class="kabar" id="kabar" aria-live="polite"></div>
+  <div class="kartu-baris" id="kartu-utama" aria-busy="true">
+    <div class="rangka"></div><div class="rangka"></div><div class="rangka"></div>
+    <div class="rangka"></div><div class="rangka"></div><div class="rangka"></div>
+  </div>
   <div class="panel-baris">
     <div class="panel">
       <h2>Pelajaran menurut status</h2>
@@ -96,14 +133,15 @@
 "use strict";
 const N = (x)=> (x==null?0:x);
 const el = (id)=>document.getElementById(id);
-let jeda=false, timer=null;
+let jeda=false, timer=null, pertama=true;
 
 function warnaTitik(hidup){ el("titik").classList.toggle("mati",!hidup); }
 
-function kartu(angka,judul,imbuh){
-  const d=document.createElement("div"); d.className="kartu";
+function kartu(angka,judul,imbuh,opsi){
+  opsi = opsi||{};
+  const d=document.createElement("div"); d.className="kartu"+(opsi.utama?" utama":"");
   d.innerHTML=`<div class="angka">${angka}</div><div class="judul">${judul}</div>`+
-    (imbuh?`<div class="imbuh">${imbuh}</div>`:"");
+    (imbuh?`<div class="imbuh${opsi.peringatan?" peringatan":""}">${imbuh}</div>`:"");
   return d;
 }
 
@@ -112,13 +150,17 @@ function rinci(wadah, kelas, nama, nilai, maks){
   const d=document.createElement("div"); d.className="rinci";
   d.innerHTML=`<span class="nama">${nama}</span>`+
     `<span class="bar ${kelas}"><span style="width:${pct}%"></span></span>`+
-    `<span class="nilai">${nilai}</span>`;
+    `<span class="nilai${nilai?"":" nol"}">${nilai}</span>`;
   wadah.appendChild(d);
+}
+
+function lonceng(kelas, html){
+  const l=document.createElement("div"); l.className="lonceng "+kelas; l.innerHTML=html;
+  el("kabar").appendChild(l);
 }
 
 function render(d){
   const m = d.metrik||{};
-  // header
   const mode = d.mode||"—";
   const bm = el("mode"); bm.textContent = mode;
   bm.className = "badge "+(mode.startsWith("relay")?"relay":"otoritatif");
@@ -126,40 +168,33 @@ function render(d){
   el("embed").textContent = (e.jenis||"?")+" · "+(e.model||"?")+(e.dim?(" · "+e.dim+"d"):"");
   el("kaki").textContent = "ingat v"+(d.versi||"?")+" · "+(d.dir_data||"");
 
-  // kabar (alarm + peringatan sesi)
+  // ---- kabar: alarm > peringatan > kosong > sehat
   const kabar = el("kabar"); kabar.innerHTML="";
   const alarm = m.alarm||[];
-  alarm.forEach(a=>{
-    const l=document.createElement("div"); l.className="lonceng bahaya";
-    l.innerHTML="⚠ <span>"+(typeof a==="string"?a:JSON.stringify(a))+"</span>"; kabar.appendChild(l);
-  });
+  alarm.forEach(a=> lonceng("bahaya","⚠ <span>"+(typeof a==="string"?a:JSON.stringify(a))+"</span>"));
   const berturut = N(m.sesi_tanpa_episode_berturut);
-  if(berturut>=3){
-    const l=document.createElement("div"); l.className="lonceng hati";
-    l.innerHTML="⚠ <span>"+berturut+" sesi berturut tanpa episode — hook penangkap mungkin tidak jalan.</span>";
-    kabar.appendChild(l);
-  }
-  if(N(m.tinjau_ulang)>0){
-    const l=document.createElement("div"); l.className="lonceng hati";
-    l.innerHTML="✎ <span>"+m.tinjau_ulang+" item menunggu tinjau ulang.</span>"; kabar.appendChild(l);
-  }
-  if(alarm.length===0 && berturut<3){
-    const l=document.createElement("div"); l.className="lonceng tenang";
-    l.innerHTML="✓ <span>Tidak ada alarm. Store sehat.</span>"; kabar.appendChild(l);
-  }
+  if(berturut>=3) lonceng("hati","⚠ <span><b>"+berturut+" sesi berturut</b> tanpa episode — hook penangkap mungkin tidak jalan.</span>");
+  if(N(m.tinjau_ulang)>0) lonceng("hati","✎ <span><b>"+m.tinjau_ulang+"</b> item menunggu tinjau ulang.</span>");
 
-  // kartu utama
+  // ---- kartu utama
   const pjl = N(m.pelajaran_hipotesis)+N(m.pelajaran_usulan)+N(m.pelajaran_aturan)+N(m.pelajaran_dipersempit)+N(m.pelajaran_ditarik);
   const prl = N(m.prosedur_draf)+N(m.prosedur_teruji)+N(m.prosedur_aktif)+N(m.prosedur_dipersempit)+N(m.prosedur_ditarik);
-  const ku = el("kartu-utama"); ku.innerHTML="";
-  ku.appendChild(kartu(N(m.episode_aktif),"Episode aktif", N(m.episode_didinginkan)+" didinginkan"));
+  const totalIsi = N(m.episode_aktif)+pjl+prl+N(m.norma);
+  const ku = el("kartu-utama"); ku.innerHTML=""; ku.setAttribute("aria-busy","false");
+
+  if(totalIsi===0){
+    lonceng("info","○ <span>Store masih kosong — belum ada memori tersimpan. Jalankan hook / ekstensi, lalu data akan muncul di sini.</span>");
+  } else if(alarm.length===0 && berturut<3){
+    lonceng("tenang","✓ <span>Tidak ada alarm. Store sehat.</span>");
+  }
+
+  ku.appendChild(kartu(N(m.episode_aktif),"Episode aktif", N(m.episode_didinginkan)+" didinginkan", {utama:true}));
   ku.appendChild(kartu(pjl,"Pelajaran", N(m.pelajaran_usulan)+" usulan · "+N(m.pelajaran_aturan)+" aturan"));
   ku.appendChild(kartu(prl,"Prosedur", N(m.prosedur_aktif)+" aktif · "+N(m.prosedur_draf)+" draf"));
   ku.appendChild(kartu(N(m.norma),"Norma"));
-  ku.appendChild(kartu(N(m.tinjau_ulang),"Tinjau ulang", N(m.tinjau_ulang)>0?"perlu perhatian":"bersih"));
-  ku.appendChild(kartu(N(m.sesi_tanpa_episode),"Sesi tanpa episode", berturut+" berturut"));
+  ku.appendChild(kartu(N(m.tinjau_ulang),"Tinjau ulang", N(m.tinjau_ulang)>0?"perlu perhatian":"bersih", {peringatan:N(m.tinjau_ulang)>0}));
+  ku.appendChild(kartu(N(m.sesi_tanpa_episode),"Sesi tanpa episode", berturut+" berturut", {peringatan:berturut>=3}));
 
-  // rincian pelajaran
   const rp = el("r-pelajaran"); rp.innerHTML="";
   const pel=[["hipotesis","s-hipotesis",m.pelajaran_hipotesis],["usulan","s-usulan",m.pelajaran_usulan],
     ["aturan","s-aturan",m.pelajaran_aturan],["dipersempit","s-dipersempit",m.pelajaran_dipersempit],
@@ -167,7 +202,6 @@ function render(d){
   const maxp = Math.max(1,...pel.map(x=>N(x[2])));
   pel.forEach(x=>rinci(rp,x[1],x[0],N(x[2]),maxp));
 
-  // rincian prosedur
   const rpr = el("r-prosedur"); rpr.innerHTML="";
   const pro=[["draf","s-draf",m.prosedur_draf],["teruji","s-teruji",m.prosedur_teruji],
     ["aktif","s-aktif",m.prosedur_aktif],["dipersempit","s-dipersempit",m.prosedur_dipersempit],
@@ -175,8 +209,11 @@ function render(d){
   const maxpr = Math.max(1,...pro.map(x=>N(x[2])));
   pro.forEach(x=>rinci(rpr,x[1],x[0],N(x[2]),maxpr));
 
-  el("waktu").textContent = "diperbarui "+new Date().toLocaleTimeString("id-ID");
+  const w = el("waktu");
+  w.textContent = "diperbarui "+new Date().toLocaleTimeString("id-ID");
+  w.classList.remove("denyut"); void w.offsetWidth; w.classList.add("denyut");
   el("statusteks").textContent = "terhubung"; warnaTitik(true);
+  pertama=false;
 }
 
 async function tarik(){
@@ -185,12 +222,20 @@ async function tarik(){
     if(!r.ok) throw new Error("HTTP "+r.status);
     render(await r.json());
   }catch(err){
-    el("statusteks").textContent = "gagal: "+err.message; warnaTitik(false);
+    el("statusteks").textContent = "gagal"; warnaTitik(false);
+    if(pertama){
+      el("kartu-utama").innerHTML="";
+      el("kabar").innerHTML="";
+      lonceng("bahaya","⚠ <span>Tidak bisa menghubungi server monitor: "+err.message+
+        ". Pastikan <code>ingat pantau</code> berjalan.</span>");
+    }
   }
 }
 function jadwalkan(){ clearInterval(timer); if(!jeda) timer=setInterval(tarik,5000); }
 el("segar").onclick = tarik;
-el("jeda").onclick = ()=>{ jeda=!jeda; el("jeda").textContent = jeda?"▶ Lanjut":"⏸ Jeda"; jadwalkan(); if(!jeda) tarik(); };
+el("jeda").onclick = ()=>{ jeda=!jeda; el("jeda").textContent = jeda?"▶ Lanjut":"⏸ Jeda";
+  el("jeda").setAttribute("aria-label", jeda?"Lanjutkan pembaruan otomatis":"Jeda pembaruan otomatis");
+  jadwalkan(); if(!jeda) tarik(); };
 tarik(); jadwalkan();
 </script>
 </body>

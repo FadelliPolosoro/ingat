@@ -5,33 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ingat · Graf</title>
 <style>
-  html,body{margin:0;height:100%;background:#0b0d10;color:#e6e8ea;
+  :root{
+    --bg:#0b0d10; --bar:rgba(18,21,26,.82); --panel:#14181e; --tepi:#252a32; --tepi2:#2f3540;
+    --teks:#e6e8ea; --redup:#9aa3ad; --samar:#6b7280; --aksen:#5b8cff;
+  }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--teks);-webkit-font-smoothing:antialiased;
     font:13px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
-  #bar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:14px;
-    padding:0 16px;background:rgba(16,18,22,.82);border-bottom:1px solid #23272e;backdrop-filter:blur(6px);z-index:5}
-  #bar b{font-weight:600}
-  #bar .redup{color:#9aa3ad}
-  #bar a,#bar button{color:#cdd3da;background:#181b20;border:1px solid #2a2f36;border-radius:8px;
-    padding:5px 11px;text-decoration:none;font:inherit;cursor:pointer}
-  #bar a:hover,#bar button:hover{border-color:#5b8cff}
-  .legenda{display:flex;gap:12px;margin-left:auto;color:#9aa3ad}
-  .legenda span{display:inline-flex;align-items:center;gap:5px}
+  #bar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:8px;
+    padding:0 14px;background:var(--bar);border-bottom:1px solid var(--tepi);
+    backdrop-filter:saturate(1.4) blur(8px);z-index:5;overflow:hidden}
+  #bar b{font-weight:650;letter-spacing:.2px;display:inline-flex;align-items:center;gap:7px;margin-right:2px;white-space:nowrap}
+  #bar b::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--aksen);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--aksen) 22%,transparent)}
+  .tombol{color:var(--teks);background:var(--panel);border:1px solid var(--tepi);border-radius:8px;
+    padding:6px 11px;text-decoration:none;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:5px;transition:border-color .15s,background .15s,transform .05s}
+  .tombol:hover{border-color:var(--aksen);background:var(--tepi2)}
+  .tombol:active{transform:translateY(1px)}
+  .tombol.utama{border-color:color-mix(in srgb,var(--aksen) 55%,var(--tepi))}
+  :focus-visible{outline:2px solid var(--aksen);outline-offset:2px}
+  .pisah{width:1px;height:20px;background:var(--tepi);margin:0 2px;flex:none}
+  #hitung{color:var(--redup);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .legenda{display:flex;gap:11px;margin-left:auto;color:var(--redup);font-size:12px}
+  .legenda span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
-  canvas{display:block;position:fixed;top:46px;left:0}
-  #tip{position:fixed;pointer-events:none;z-index:6;background:#12151a;border:1px solid #2a2f36;
-    border-radius:8px;padding:7px 10px;max-width:320px;font-size:12px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.5)}
-  #tip .j{color:#9aa3ad;text-transform:uppercase;font-size:10px;letter-spacing:.5px}
-  #muat{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#9aa3ad}
+  canvas{display:block;position:fixed;top:46px;left:0;cursor:grab}
+  canvas:active{cursor:grabbing}
+  #tip{position:fixed;pointer-events:none;z-index:6;background:var(--panel);border:1px solid var(--tepi2);
+    border-radius:9px;padding:8px 11px;max-width:340px;font-size:12px;line-height:1.5;display:none;
+    box-shadow:0 8px 28px rgba(0,0,0,.55)}
+  #tip .j{color:var(--samar);text-transform:uppercase;font-size:10px;letter-spacing:.6px;font-weight:600;margin-bottom:2px}
+  #muat{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--redup);
+    display:flex;align-items:center;gap:10px}
+  #muat::before{content:"";width:16px;height:16px;border-radius:50%;
+    border:2px solid var(--tepi);border-top-color:var(--aksen);animation:putar .8s linear infinite}
+  @keyframes putar{100%{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){#muat::before{animation:none}}
 </style>
 </head>
 <body>
 <div id="bar">
   <b>ingat · Graf</b>
-  <a href="/">← Monitor</a>
-  <button id="panas">Panaskan</button>
-  <button id="pas">Pas layar</button>
-  <button id="lepas">Tampilkan semua</button>
-  <span class="redup" id="hitung">memuat…</span>
+  <a class="tombol" href="/">← Monitor</a>
+  <span class="pisah"></span>
+  <button class="tombol" id="panas">Panaskan</button>
+  <button class="tombol" id="pas">Pas layar</button>
+  <button class="tombol utama" id="lepas">Tampilkan semua</button>
+  <span id="hitung">memuat…</span>
   <div class="legenda">
     <span><i class="dot" style="background:#6b7280"></i>episode</span>
     <span><i class="dot" style="background:#3b82f6"></i>pelajaran</span>
