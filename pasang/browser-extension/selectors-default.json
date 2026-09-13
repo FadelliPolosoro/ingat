@@ -1,15 +1,15 @@
 {
   "_baca_dulu": "Selektor CSS untuk mengenali balon pesan pengguna vs AI di tiap situs. ChatGPT diisi dengan pola atribut data-message-author-role yang secara umum relatif stabil dan dipakai banyak alat ekspor lain — TETAP VERIFIKASI SENDIRI, bisa berubah kapan saja tanpa pemberitahuan. Empat situs lain SENGAJA dikosongkan: isi sendiri lewat tombol 'Pilih elemen' di popup ekstensi (klik satu balon pesanmu, lalu satu balon jawaban AI, di halaman asli yang sedang kamu buka) — ini lebih tahan lama daripada selektor tebakan, karena struktur tiap situs berubah dari waktu ke waktu dan belum diverifikasi di sini. Peran ketiga 'compose' (kotak ketik) dipakai fitur 'Suntik memori' — juga diisi lewat Pilih elemen.",
   "chatgpt.com": {
-    "user": "[data-message-author-role='user']",
-    "assistant": "[data-message-author-role='assistant']",
-    "verifikasi": "belum — pola umum, cek sendiri",
+    "user": "[data-turn=user]",
+    "assistant": "[data-turn=assistant]",
+    "verifikasi": "diverifikasi live 14 Sep 2026 — data-message-author-role=assistant sudah MATI, diganti data-turn",
     "compose": "#prompt-textarea"
   },
   "chat.openai.com": {
-    "user": "[data-message-author-role='user']",
-    "assistant": "[data-message-author-role='assistant']",
-    "verifikasi": "belum — pola umum, cek sendiri",
+    "user": "[data-turn=user]",
+    "assistant": "[data-turn=assistant]",
+    "verifikasi": "diverifikasi live 14 Sep 2026 — data-message-author-role=assistant sudah MATI, diganti data-turn",
     "compose": "#prompt-textarea"
   },
   "claude.ai": {
