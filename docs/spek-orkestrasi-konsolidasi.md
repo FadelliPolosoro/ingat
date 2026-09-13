@@ -26,7 +26,7 @@ Masuk daftar prinsip spek arsitektur Bab 2 (sebelumnya berhenti di P10).
 
 ## 2. Model lokal untuk tier S
 
-- **Pilihan:** Qwen3 **4B**; turun ke **1.7B** bila VPS berat (1 vCPU/4 GB — lihat catatan K9).
+- **Pilihan (DIPUTUSKAN 2026-09-13):** **Qwen3 4B**, dijalankan di **laptop** (K30 menjadikan laptop otoritatif). Percabangan lama "turun ke 1.7B bila VPS berat" dihapus: beban tier S tidak lagi di VPS 1 vCPU/4 GB, jadi tak perlu fallback yang mengecil diam-diam.
 - **Sifat:** lokal, **tidak keluar mesin** — dasar mengapa tier S boleh menyentuhnya.
 - **Lokalitas diverifikasi dari alamat, bukan nama** (`alamat_lokal`): loopback, RFC1918, label tunggal
   (`http://ollama:11434` — DNS Docker), atau sufiks `.local`/`.internal`. Penyedia bernama "lokal"
