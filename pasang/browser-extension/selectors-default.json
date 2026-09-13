@@ -19,10 +19,10 @@
     "compose": ""
   },
   "gemini.google.com": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": "user-query",
+    "assistant": "model-response",
+    "verifikasi": "diverifikasi live 13 Sep 2026 (custom element Angular, tahan redesain)",
+    "compose": "rich-textarea .ql-editor"
   },
   "chat.deepseek.com": {
     "user": "",
