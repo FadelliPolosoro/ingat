@@ -72,6 +72,10 @@ def utama(argv: list[str] | None = None) -> int:
     t.add_argument("--tugas", default=None)
     sub.add_parser("startup", help="tampilkan L-peta + L-aturan").add_argument("--lingkup", required=True)
     sub.add_parser("metrik", help="ringkasan metrik")
+    pt = sub.add_parser("pantau", help="monitor visual store di browser (localhost, baca-saja, tanpa auth)")
+    pt.add_argument("--host", default="127.0.0.1", help="hanya loopback (127.0.0.1/localhost/::1)")
+    pt.add_argument("--port", type=int, default=8790)
+    pt.add_argument("--tanpa-buka", action="store_true", help="jangan buka browser otomatis")
     sub.add_parser("uji", help="jalankan uji putar-ulang U1–U9")
     sub.add_parser("token", help="buat token acak untuk INGAT_TOKEN")
     t2 = sub.add_parser("totp-atur", help="atur verifikasi dua langkah mandiri (K26) — tanpa Google")
@@ -197,6 +201,9 @@ def utama(argv: list[str] | None = None) -> int:
         print(json.dumps(app.gateway.muat_startup(a.lingkup), ensure_ascii=False, indent=2))
     elif a.perintah == "metrik":
         print(json.dumps(app.store.ringkasan_metrik(), ensure_ascii=False, indent=2))
+    elif a.perintah == "pantau":
+        from .pantau import layani_pantau
+        return layani_pantau(app, a.host, a.port, buka=not a.tanpa_buka)
     elif a.perintah == "jadwal":
         _jadwal(app, a.jam, a.ambang, a.interval)
     return 0
