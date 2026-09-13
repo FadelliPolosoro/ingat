@@ -43,15 +43,15 @@
     "compose": ""
   },
   "www.perplexity.ai": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": "[dir=\"auto\"] .whitespace-pre-line",
+    "assistant": ".prose",
+    "verifikasi": "diverifikasi live 14 Sep 2026 (kelas Tailwind — lebih rapuh, pilih ulang bila situs redesain)",
+    "compose": "[contenteditable=\"true\"][role=\"textbox\"]"
   },
   "perplexity.ai": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": "[dir=\"auto\"] .whitespace-pre-line",
+    "assistant": ".prose",
+    "verifikasi": "diverifikasi live 14 Sep 2026 (kelas Tailwind — lebih rapuh, pilih ulang bila situs redesain)",
+    "compose": "[contenteditable=\"true\"][role=\"textbox\"]"
   }
 }
