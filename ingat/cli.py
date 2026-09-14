@@ -76,6 +76,7 @@ def utama(argv: list[str] | None = None) -> int:
     t.add_argument("--tugas", default=None)
     sub.add_parser("startup", help="tampilkan L-peta + L-aturan").add_argument("--lingkup", required=True)
     sub.add_parser("metrik", help="ringkasan metrik")
+    sub.add_parser("panel", help="buka Panel Kendali desktop (GUI Tkinter, K29): status + konsolidasi/tanya/jawab + tempel cepat, server in-process")
     pt = sub.add_parser("pantau", help="monitor visual store di browser (localhost, baca-saja, tanpa auth)")
     pt.add_argument("--host", default="127.0.0.1", help="hanya loopback (127.0.0.1/localhost/::1)")
     pt.add_argument("--port", type=int, default=8790)
@@ -211,6 +212,9 @@ def utama(argv: list[str] | None = None) -> int:
     elif a.perintah == "pantau":
         from .pantau import layani_pantau
         return layani_pantau(app, a.host, a.port, buka=not a.tanpa_buka)
+    elif a.perintah == "panel":
+        from .panel import jalankan
+        return jalankan(a.konfig)
     elif a.perintah == "jadwal":
         _jadwal(app, a.jam, a.ambang, a.interval)
     return 0
