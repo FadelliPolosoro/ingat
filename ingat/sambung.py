@@ -107,7 +107,17 @@ def _alias_python3_windows(jalur: str) -> bool:
     """
     if not sys.platform.startswith("win"):
         return False
-    return os.path.basename(jalur).lower() in ("python3.exe", "python3")
+    nama = os.path.basename(jalur).lower()
+    if nama in ("python3.exe", "python3"):
+        return True
+    folder = os.path.dirname(os.path.realpath(jalur)).lower()
+    if "windowsapps" in folder or "microsoftwindowsapps" in folder.replace(" ", ""):
+        try:
+            if os.path.getsize(jalur) == 0:
+                return True
+        except OSError:
+            pass
+    return False
 
 
 def entri_ingat(python_exe: str | None = None, konfig_ingat: str | None = None,
@@ -312,7 +322,7 @@ def mcpb_terpasang(dir_data: str | None = None) -> bool:
     """ingat terpasang sebagai ekstensi MCPB dan tidak dimatikan pengguna."""
     dir_data = dir_data or dir_claude()
     try:
-        with open(os.path.join(dir_data, BERKAS_PASANGAN_EKSTENSI), encoding="utf-8") as f:
+        with open(os.path.join(dir_data, BERKAS_PASANGAN_EKSTENSI), encoding="utf-8-sig") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return False
@@ -325,10 +335,10 @@ def mcpb_terpasang(dir_data: str | None = None) -> bool:
             continue
         setelan = os.path.join(dir_data, DIR_PENGATURAN_EKSTENSI, f"{id_ekstensi}.json")
         try:
-            with open(setelan, encoding="utf-8") as f:
+            with open(setelan, encoding="utf-8-sig") as f:
                 aktif = json.load(f).get("isEnabled", True)
         except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            aktif = True  # berkas setelan tak terbaca bukan berarti dimatikan
+            aktif = True
         if aktif:
             return True
     return False

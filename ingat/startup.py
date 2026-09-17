@@ -93,13 +93,16 @@ def target_peluncuran() -> dict:
             "beku": False}
 
 
-def _kutip(bagian: str) -> str:
-    """SELALU dikutip, bukan hanya saat ada spasi: `&` `^` `(` `)` `%` sama berbahayanya di
-    .cmd. Path seperti `C:\\kerja\\R&D` yang ditulis telanjang dipotong cmd jadi dua perintah
-    (`cd /d C:\\kerja\\R` lalu `D`), dan boot gagal tanpa jejak."""
+def _kutip(bagian: str, untuk_cmd: bool = False) -> str:
+    """SELALU dikutip. ``untuk_cmd=True`` juga menggandakan ``%`` → ``%%`` agar cmd tidak
+    mengembangkan variabel lingkungan di dalam path (kutip ganda TIDAK melindungi ``%``)."""
     if len(bagian) >= 2 and bagian.startswith('"') and bagian.endswith('"'):
-        return bagian
-    return f'"{bagian}"'
+        isi = bagian[1:-1]
+    else:
+        isi = bagian
+    if untuk_cmd:
+        isi = isi.replace("%", "%%")
+    return f'"{isi}"'
 
 
 def _baris_argumen(argumen: list[str]) -> str:
@@ -145,8 +148,8 @@ def _tulis_lnk(jalur: str, exe: str, argumen: list[str], kerja: str) -> bool:
 def _tulis_cmd(jalur: str, exe: str, argumen: list[str], kerja: str) -> None:
     # `start` memperlakukan argumen berkutip PERTAMA sebagai judul jendela; tanpa "" kosong
     # di depan, path exe berspasi akan jadi judul dan tidak ada apa pun yang dijalankan.
-    baris = ['@echo off', f'cd /d {_kutip(kerja)}',
-             ('start "" ' + _kutip(exe) + (" " + _baris_argumen(argumen) if argumen else "")).rstrip()]
+    baris = ['@echo off', f'cd /d {_kutip(kerja, untuk_cmd=True)} || exit /b 1',
+             ('start "" ' + _kutip(exe, untuk_cmd=True) + (" " + " ".join(_kutip(a, untuk_cmd=True) for a in argumen) if argumen else "")).rstrip()]
     with open(jalur, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(baris) + "\n")
 
