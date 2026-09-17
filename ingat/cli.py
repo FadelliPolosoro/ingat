@@ -52,6 +52,21 @@ def utama(argv: list[str] | None = None) -> int:
     im = sub.add_parser("impor", help="impor episode dari berkas ekspor ke store ini (K30)")
     im.add_argument("--berkas", required=True)
     im.add_argument("--timpa", action="store_true", help="timpa episode ber-id yang sudah ada (default: dilewati)")
+    bk = sub.add_parser("backup", help="bungkus store+vault+konfigurasi jadi tarball portabel + SHA-256 (A1, pindah perangkat)")
+    bk.add_argument("--rumah", default=os.path.expanduser("~/.ingat"), help="folder ingat sumber (default ~/.ingat)")
+    bk.add_argument("--keluar", default=None, help="tarball tujuan (default <rumah>/backup/ingat-backup-<waktu>.tar.gz)")
+    bk.add_argument("--sandi", default=None, help="enkripsi tarball dengan sandi (wajib sebelum upload FTP)")
+    rs = sub.add_parser("restore", help="pulihkan tarball backup ke folder ingat perangkat baru (A1)")
+    rs.add_argument("--berkas", required=True, help="tarball backup")
+    rs.add_argument("--target", default=os.path.expanduser("~/.ingat"), help="folder ingat tujuan (default ~/.ingat)")
+    rs.add_argument("--timpa", action="store_true", help="timpa data/vault yang sudah ada di target")
+    rs.add_argument("--tanpa-verifikasi", action="store_true", help="lewati verifikasi checksum SHA-256")
+    rs.add_argument("--sandi", default=None, help="sandi dekripsi (wajib bila backup terenkripsi)")
+    rs.add_argument("--tanpa-konfig", action="store_true",
+                    help="jangan timpa konfigurasi.json target (WAJIB saat sinkron data ke mesin lain)")
+    rk = sub.add_parser("rekon", help="rekonsiliasi store ↔ vault: deteksi & perbaiki divergensi (C)")
+    rk.add_argument("--perbaiki", action="store_true", help="perbaiki (bukan hanya lapor)")
+    rk.add_argument("--rumah", default=os.path.expanduser("~/.ingat"), help="folder ingat (default ~/.ingat)")
     ic = sub.add_parser("impor-claude", help="impor 'chat terdahulu' Claude Code dari transkrip lokal ~/.claude/projects (Jalur A, tanpa ekspor)")
     ic.add_argument("--dir", default=None, help="folder transkrip (default: ~/.claude/projects)")
     ic.add_argument("--lingkup", default=None, help="paksa lingkup untuk semua (mis. peran:asisten-ai); default: per-proyek dari cwd transkrip")
@@ -82,7 +97,9 @@ def utama(argv: list[str] | None = None) -> int:
     pt.add_argument("--port", type=int, default=8790)
     pt.add_argument("--tanpa-buka", action="store_true", help="jangan buka browser otomatis")
     sub.add_parser("uji", help="jalankan uji putar-ulang U1–U9")
-    sub.add_parser("token", help="buat token acak untuk INGAT_TOKEN")
+    tok = sub.add_parser("token", help="kelola token autentikasi (tampil/buat/set)")
+    tok.add_argument("--buat", action="store_true", help="buat token baru, simpan ke ~/.ingat/token")
+    tok.add_argument("--set", dest="set_val", metavar="TOKEN", help="simpan token spesifik ke ~/.ingat/token")
     t2 = sub.add_parser("totp-atur", help="atur verifikasi dua langkah mandiri (K26) — tanpa Google")
     t2.add_argument("--tulis-env", action="store_true", help="tulis/perbarui INGAT_TOTP_RAHASIA langsung ke .env")
     j = sub.add_parser("jadwal", help="penjadwal konsolidasi: harian pada jam tertentu + saat episode aktif >= ambang (7.1)")
@@ -92,9 +109,43 @@ def utama(argv: list[str] | None = None) -> int:
     a = p.parse_args(argv)
 
     if a.perintah == "token":
+        from .jauh import baca_token
         import secrets
-        print(secrets.token_urlsafe(36))
-        return 0
+        berkas_token = os.path.expanduser("~/.ingat/token")
+        if a.set_val:
+            val = a.set_val.strip()
+            if len(val) < 24:
+                print("Token terlalu pendek (minimal 24 karakter).")
+                return 1
+            os.makedirs(os.path.dirname(berkas_token), exist_ok=True)
+            with open(berkas_token, "w", encoding="utf-8") as f:
+                f.write(val + "\n")
+            print(f"Token disimpan ke {berkas_token}")
+            return 0
+        if a.buat:
+            val = secrets.token_urlsafe(36)
+            os.makedirs(os.path.dirname(berkas_token), exist_ok=True)
+            with open(berkas_token, "w", encoding="utf-8") as f:
+                f.write(val + "\n")
+            print(f"Token baru disimpan ke {berkas_token}")
+            print(f"Nilai: {val}")
+            return 0
+        t = os.environ.get("INGAT_TOKEN", "").strip()
+        if t:
+            print(f"Token aktif: {t[:6]}...{t[-4:]}  (sumber: env INGAT_TOKEN)")
+            return 0
+        if os.path.isfile(berkas_token):
+            with open(berkas_token, encoding="utf-8") as f:
+                t = f.read().strip()
+            if t:
+                print(f"Token aktif: {t[:6]}...{t[-4:]}  (sumber: ~/.ingat/token)")
+                return 0
+        t = baca_token(None)
+        if t:
+            print(f"Token aktif: {t[:6]}...{t[-4:]}  (sumber: konfigurasi)")
+            return 0
+        print("Belum ada token. Jalankan: ingat token --buat")
+        return 1
     if a.perintah == "totp-atur":
         from .auth_totp import buat_rahasia, otpauth_url, kode_sekarang
         rahasia = buat_rahasia()
@@ -140,6 +191,51 @@ def utama(argv: list[str] | None = None) -> int:
         # di folder proyek (tanpa --konfig) meninggalkan data/ kosong yang ikut ter-zip ke distribusi.
         from .pasang import pasang
         print(json.dumps(pasang(tulis=a.tulis), ensure_ascii=False, indent=2))
+        return 0
+    if a.perintah == "backup":
+        # Murni operasi berkas (snapshot SQLite + salin) — TIDAK membuka Store/embedder, jadi
+        # tak butuh Ollama hidup dan tak meninggalkan data/ kosong.
+        from .backup import buat_backup
+        meta = buat_backup(a.rumah, a.keluar, sandi=a.sandi)
+        print(json.dumps({k: meta.get(k) for k in ("berkas", "sha256", "ukuran", "waktu", "ingat_versi", "jumlah")},
+                         ensure_ascii=False, indent=2))
+        return 0
+    if a.perintah == "restore":
+        # Dijalankan di perangkat BARU: store belum ada, Ollama mungkin belum jalan — maka
+        # jangan bangun Aplikasi (yang akan mati membuka Store yang belum ada).
+        from .backup import pulihkan_backup
+        lap = pulihkan_backup(a.berkas, a.target, timpa=a.timpa,
+                              verifikasi=not a.tanpa_verifikasi, sandi=a.sandi,
+                              pulihkan_konfig=not a.tanpa_konfig)
+        print(json.dumps({k: lap.get(k) for k in ("dipulihkan_ke", "waktu", "ingat_versi", "versi_backup",
+                                                  "jumlah", "konfig_dipulihkan")},
+                         ensure_ascii=False, indent=2))
+        return 0
+    if a.perintah == "rekon":
+        from .rekonsiliasi import periksa, perbaiki
+        from .simpan import Store
+        dir_data = os.path.join(a.rumah, "data")
+        vault_path = os.path.join(a.rumah, "vault")
+        if not os.path.isdir(dir_data):
+            print(f"Store tidak ditemukan: {dir_data}")
+            return 1
+        st = Store.__new__(Store)
+        import sqlite3 as _sql
+        st.dir_data = dir_data
+        st.db = _sql.connect(os.path.join(dir_data, "ingat.sqlite"))
+        st.db.row_factory = _sql.Row
+        try:
+            vp = vault_path if os.path.isdir(vault_path) else None
+            if a.perbaiki:
+                from .obsidian import Vault
+                v = Vault(vault_path) if vp else None
+                lap = perbaiki(st, vp, v)
+                print(json.dumps(lap, ensure_ascii=False, indent=2))
+            else:
+                lap = periksa(st, vp)
+                print(json.dumps(lap, ensure_ascii=False, indent=2))
+        finally:
+            st.db.close()
         return 0
 
     # Bendera dipasang SEBELUM Store dibuka: Aplikasi membuka Store di __init__, jadi tanpa ini

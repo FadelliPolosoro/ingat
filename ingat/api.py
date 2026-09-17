@@ -74,7 +74,8 @@ def _openapi(host: str) -> dict:
 
 
 def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | None = None,
-                 totp_rahasia: str = "", sesi_rahasia: str = ""):
+                 totp_rahasia: str = "", sesi_rahasia: str = "",
+                 penjaga=None):
     proxy_tepercaya = bool(konfig_server.get("proxy_tepercaya"))
     batas_body = int(konfig_server.get("batas_body", 1_048_576))
     laju_per_menit = int(konfig_server.get("laju_per_menit", 120))
@@ -192,12 +193,28 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
             return data
 
         def _jaga(self) -> bool:
+            ip = self._ip()
+            # L9: periksa ban dari penjaga sebelum proses apa pun
+            if penjaga:
+                sisa = penjaga.ip_diblokir(ip)
+                if sisa > 0:
+                    self._kirim(403, {"galat": f"IP diblokir ({int(sisa)} detik tersisa)"})
+                    return False
             if not self._laju_ok():
                 self._kirim(429, {"galat": "terlalu banyak permintaan"})
                 return False
             if not self._auth():
+                # L9: catat gagal + eskalasi
+                if penjaga:
+                    ua = self.headers.get("User-Agent", "")
+                    penjaga.catat_gagal(ip, "token_gagal", ua)
                 self._kirim(401, {"galat": "token tidak valid"})
                 return False
+            # L9: delay adaptif untuk IP yang pernah gagal
+            if penjaga:
+                tunda = penjaga.delay_untuk(ip)
+                if tunda > 0:
+                    time.sleep(tunda)
             return True
 
         # ---- routes ----
@@ -280,7 +297,10 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 return
             try:
                 if path == "/metrik":
-                    return self._kirim(200, app.store.ringkasan_metrik())
+                    metrik = app.store.ringkasan_metrik()
+                    if penjaga:
+                        metrik["keamanan"] = penjaga.statistik()
+                    return self._kirim(200, metrik)
                 if path == "/penyedia":
                     return self._kirim(200, {"aktif": sorted(app.penyedia), "gate": app.gate.izin_tier, "preset": daftar_preset()})
                 if path.startswith("/bukti/"):
@@ -428,9 +448,11 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
 
 
 def jalankan_server(app: Aplikasi):
-    token = os.environ.get("INGAT_TOKEN", "")
+    from .jauh import baca_token
+    from .penjaga import Penjaga
+    token = baca_token(app.konfig if hasattr(app, "konfig") else None)
     if len(token) < 24:
-        raise SystemExit("INGAT_TOKEN wajib diset di environment (>= 24 karakter). Tidak ada nilai bawaan — sengaja.")
+        raise SystemExit("Token wajib >= 24 karakter. Set via env INGAT_TOKEN, berkas ~/.ingat/token, atau jalankan: ingat token --buat")
     _google = {
         "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
@@ -442,11 +464,15 @@ def jalankan_server(app: Aplikasi):
                           "(>= 24 karakter). Buat: python3 -m ingat token")
     ks = app.konfig.get("server", {})
     host, port = ks.get("host", "127.0.0.1"), int(ks.get("port", 8765))
-    server = ThreadingHTTPServer((host, port), buat_handler(app, token, ks, _google, _totp_rahasia, _google["sesi_rahasia"]))
+    # L9+L10: Penjaga keamanan — deteksi intrusi + eskalasi + notifikasi
+    webhook = os.environ.get("INGAT_WEBHOOK_KEAMANAN", ks.get("webhook_keamanan"))
+    _penjaga = Penjaga(webhook=webhook)
+    server = ThreadingHTTPServer((host, port), buat_handler(app, token, ks, _google, _totp_rahasia, _google["sesi_rahasia"], penjaga=_penjaga))
     server.daemon_threads = True
     print(f"[ingat] v{__version__} · {__penulis__} · http://{host}:{port} · vault={app.konfig.get('vault')} · "
           f"penyedia={sorted(app.penyedia)} · google_auth={'aktif' if _google['client_id'] else 'mati'} · "
-          f"totp={'aktif' if _totp_rahasia else 'mati'}")
+          f"totp={'aktif' if _totp_rahasia else 'mati'} · "
+          f"penjaga=aktif · webhook={'aktif' if webhook else 'mati'}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
