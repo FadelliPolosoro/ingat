@@ -8,14 +8,14 @@ endpoint yang sama dipakai hook Claude Code) — tidak pernah ke server pihak ke
 
 1. **Ini bukan produk resmi Chrome Web Store.** Kamu memasangnya manual ("unpacked") — lihat langkah di
    bawah. Karena itu, tidak ada proses review keamanan pihak ketiga; kodenya ada di folder ini, baca sendiri.
-2. **Selektor untuk Claude.ai, Gemini, DeepSeek, Kimi, Perplexity SENGAJA DIKOSONGKAN.** Struktur halaman
-   situs-situs itu berubah dari waktu ke waktu dan belum diverifikasi langsung di masing-masing situs —
-   jadi dibiarkan kosong daripada menebak. ChatGPT diisi satu pola yang secara umum relatif stabil
-   (`data-message-author-role`), tapi **itu pun bisa berubah kapan saja tanpa pemberitahuan** —
-   verifikasi sendiri, jangan percaya begitu saja.
-3. **Cara mengisi 4 situs yang kosong**: buka Opsi ekstensi → klik "Pilih balon pengguna" pada situs itu →
+2. **Claude.ai tidak memakai selektor sama sekali** — lihat bagian "Jalur API" di bawah. ChatGPT, Gemini,
+   dan Perplexity memakai selektor yang sudah diverifikasi (13–14 Sep 2026), tapi **selektor bisa berubah
+   kapan saja tanpa pemberitahuan** — ekstensi akan memberi tahu kalau selektornya mati, tidak diam saja.
+   DeepSeek dan Kimi masih kosong.
+3. **Cara mengisi situs yang kosong**: buka Opsi ekstensi → klik "Pilih balon pengguna" pada situs itu →
    di tab situs itu, klik satu balon pesanmu → ulangi untuk "Pilih balon AI". Selektor tersimpan otomatis.
    Ini lebih tahan lama daripada selektor tebakan: kalau situsnya di-*redesign*, kamu cukup memilih ulang.
+   Satu kolom boleh berisi beberapa kandidat dipisah `||`; yang dipakai kandidat pertama yang cocok.
 4. **Area abu-abu ketentuan layanan.** Kebanyakan chat app konsumen (ChatGPT, Claude.ai, dst.) melarang
    "automated access" dalam ToS mereka dalam bentuk umum. Ekstensi ini hanya **membaca DOM** halaman yang
    sudah kamu buka dan login sendiri (tidak login otomatis, tidak melewati CAPTCHA, tidak mengklik apa pun
@@ -37,7 +37,7 @@ endpoint yang sama dipakai hook Claude Code) — tidak pernah ke server pihak ke
 
 ## Menemukan selektor tanpa menebak (`deteksi-selektor.js`)
 
-Untuk 4 situs yang selektornya kosong (Claude.ai/Gemini/Perplexity/DeepSeek/Kimi), selain picker
+Untuk situs yang selektornya kosong (DeepSeek/Kimi) atau yang selektornya patah, selain picker
 ada alat bantu: buka situsnya (login, satu percakapan berisi pesanmu + jawaban AI), tekan F12 →
 Console → tempel seluruh isi `deteksi-selektor.js`. Ia **mengukur** kandidat selektor terhadap DOM
 nyata di halamanmu (bukan menebak), mencetak tabel cocok/berteks/contoh, merekomendasikan yang sehat,
@@ -45,6 +45,44 @@ lalu mencetak perintah `chrome.storage.sync.set(...)` siap-tempel (dijalankan di
 ekstensi**, bukan di situs). Hanya membaca DOM. Kandidat awal: Gemini `user-query`/`model-response`/
 `rich-textarea .ql-editor`; Perplexity `compose = [contenteditable="true"][role="textbox"]` (diverifikasi
 di halaman guest 13 Sep 2026) — balon user/assistant-nya diverifikasi lewat skrip ini di sesi loginmu.
+
+## Jalur API untuk Claude.ai (18 September 2026)
+
+Untuk Claude.ai ekstensi **tidak membaca tampilan layar**. Ia memanggil API internal Claude memakai
+sesi login yang sudah ada di browsermu:
+
+```
+GET /api/organizations/{orgId}/chat_conversations/{id}?tree=true&rendering_mode=messages&render_all_tools=true
+```
+
+`orgId` diambil dari cookie `lastActiveOrg` (kalau cookienya hilang, dari `/api/organizations`), `id` dari
+URL halaman. Dua alasan ini lebih baik daripada selektor CSS:
+
+1. **Kontrak datanya stabil** — selektor patah setiap Anthropic mengubah tata letak; bentuk JSON tidak.
+2. **Lengkap** — DOM hanya merender sebagian percakapan panjang (virtualisasi), jadi episode hasil
+   pembacaan layar bisa bolong tanpa kelihatan. API memberi percakapan utuh.
+
+Kodenya di `pengambil-api.js`. Ia hanya **membaca** dan tidak pernah menulis ke halaman; yang mengirim
+ke server `ingat` tetap `background.js` lewat `/episode` yang sama seperti situs lain.
+
+**Kalau jalur API gagal** (belum login, endpoint berubah, format berubah, jaringan mati), ekstensi
+**jatuh ke pembacaan DOM** dan **memberi tahu di tiga tempat sekaligus**: lencana merah `!` di ikon
+ekstensi, satu baris merah di popup, dan satu bisikan kecil di pojok kanan bawah halaman (sekali per
+jenis masalah per percakapan). Catatannya tersimpan di Opsi → Diagnostik. Gagal diam-diam adalah
+kegagalan terburuk di sini: kamu akan mengira memorimu tersimpan padahal tidak.
+
+**Perplexity**: tidak ada API internal yang bisa dipastikan seperti Claude. `pengambil-api.js` hanya
+*mencoba* `/rest/thread/<slug>` **sekali per percakapan**; kalau tidak ada atau bentuknya tak dikenali,
+ia diam-diam memakai jalur DOM — tanpa peringatan, karena untuk Perplexity jalur DOM memang jalur yang
+sah. Yang tetap diperingatkan untuk semua situs: selektor sudah diisi tapi **tidak mengenali satu balon
+pun** di halaman yang jelas berisi percakapan (dicek 15 detik setelah percakapan dibuka).
+
+Karena jalur API mengembalikan seluruh percakapan setiap kali dipanggil, ekstensi menyimpan penanda
+"sudah sampai pesan ke-berapa" di `chrome.storage.local` (bukan `sessionStorage`, yang mati bersama
+tabnya) dan hanya mengirim selisihnya. Episode jalur API juga diberi `id` deterministik supaya
+pengiriman ulang meng-*upsert*, bukan menumpuk salinan.
+
+Uji tanpa browser: `node pasang/browser-extension/uji-pengambil-api.mjs` (35 periksaan).
 
 ## Cara kerja singkat
 
@@ -122,5 +160,8 @@ lagi" mulai dari cicilan pertama lagi. Bukan bug tersembunyi — cukup diklik ul
 - Tidak menarik riwayat percakapan LAMA (sebelum ekstensi dipasang) — hanya menangkap yang terjadi
   SETELAH dipasang dan situsnya kamu buka. Untuk riwayat lama, itu Jalur A (impor dari ekspor resmi
   platform) — belum dibangun di sesi ini.
-- Tidak login, tidak mengklik tombol kirim, tidak melewati proteksi apa pun. Murni membaca DOM.
+- Tidak login, tidak mengklik tombol kirim, tidak melewati proteksi apa pun. Murni membaca: DOM untuk
+  sebagian besar situs, dan untuk Claude.ai API internal situs itu sendiri memakai sesi login yang sudah
+  ada di browsermu — permintaan yang sama persis dengan yang dikirim halamannya sendiri saat kamu
+  membuka percakapan itu.
 - Tidak mengirim data ke mana pun selain host yang kamu isi sendiri di Opsi.

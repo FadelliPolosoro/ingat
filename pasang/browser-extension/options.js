@@ -57,15 +57,26 @@ document.getElementById('simpan').addEventListener('click', async () => {
   setTimeout(() => (document.getElementById('statusSimpan').textContent = ''), 2000);
 });
 
+function lolosHtml(teks) {
+  const d = document.createElement('div');
+  d.textContent = String(teks == null ? '' : teks);
+  return d.innerHTML;
+}
+
 async function segarkanDiagnostik() {
-  const d = await chrome.storage.local.get(['antrean', 'jumlah', 'terakhir', 'galatTerakhir', 'pilihTerakhir']);
+  const d = await chrome.storage.local.get(['antrean', 'jumlah', 'terakhir', 'galatTerakhir', 'pilihTerakhir', 'peringatanTerakhir']);
   const el = document.getElementById('diagnostik');
   const t = (ms) => (ms ? new Date(ms).toLocaleString('id-ID') : '—');
+  const p = d.peringatanTerakhir;
   el.innerHTML = `
+    ${p ? `<div style="margin-bottom:6px;padding:8px;border-radius:6px;background:#fdecea;color:#7a1f1f">
+      <b>⚠ Jalur utama pernah gagal</b> (${lolosHtml(p.host)}, kode <code>${lolosHtml(p.kode)}</code>, ${t(p.waktu)})<br>
+      ${lolosHtml(p.pesan)}
+    </div>` : ''}
     Episode terkirim (sejak dipasang): <b>${d.jumlah || 0}</b> · terakhir: ${t(d.terakhir)}<br>
     Antrean tertunda (server tidak terjangkau): <b>${(d.antrean || []).length}</b><br>
-    ${d.galatTerakhir ? `Galat tangkap terakhir (${d.galatTerakhir.host}): ${d.galatTerakhir.pesan} — ${t(d.galatTerakhir.waktu)}<br>` : ''}
-    ${d.pilihTerakhir ? `Selektor terakhir dipilih: ${d.pilihTerakhir.host} / ${d.pilihTerakhir.peran} → contoh teks: "${d.pilihTerakhir.contoh}"` : ''}
+    ${d.galatTerakhir ? `Galat tangkap terakhir (${lolosHtml(d.galatTerakhir.host)}): ${lolosHtml(d.galatTerakhir.pesan)} — ${t(d.galatTerakhir.waktu)}<br>` : ''}
+    ${d.pilihTerakhir ? `Selektor terakhir dipilih: ${lolosHtml(d.pilihTerakhir.host)} / ${lolosHtml(d.pilihTerakhir.peran)} → contoh teks: "${lolosHtml(d.pilihTerakhir.contoh)}"` : ''}
   `;
 }
 document.getElementById('segarkan').addEventListener('click', segarkanDiagnostik);

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ingat — tangkap percakapan AI",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Menangkap percakapanmu di ChatGPT/Claude/Gemini/DeepSeek/Kimi/Perplexity sebagai episode ingat. Data hanya dikirim ke server ingat lokalmu sendiri.",
   "permissions": [
     "storage",
@@ -44,6 +44,7 @@
         "https://perplexity.ai/*"
       ],
       "js": [
+        "pengambil-api.js",
         "content.js"
       ],
       "run_at": "document_idle"

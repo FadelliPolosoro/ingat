@@ -26,6 +26,38 @@
   let composeEl = null;
   let timerRelevansi = null;
   let terakhirCekRelevansi = 0;
+  let modeCadangan = false;       // true = jalur API gagal, kita sedang mengandalkan pembacaan DOM
+
+  // Nilai selektor boleh berisi beberapa kandidat dipisah '||'. Yang dipakai adalah kandidat PERTAMA
+  // yang benar-benar mencocokkan sesuatu — bukan gabungan koma, supaya kandidat yang salah tidak ikut
+  // menyeret elemen asing masuk ke episode saat kandidat yang benar sudah ketemu.
+  function daftarKandidat(nilai) {
+    return String(nilai || '').split('||').map((s) => s.trim()).filter(Boolean);
+  }
+
+  function pilihSemua(nilai) {
+    for (const s of daftarKandidat(nilai)) {
+      try {
+        const n = document.querySelectorAll(s);
+        if (n.length) return n;
+      } catch (e) { /* kandidat tidak valid — coba berikutnya */ }
+    }
+    return [];
+  }
+
+  function pilihSatu(nilai) {
+    for (const s of daftarKandidat(nilai)) {
+      try {
+        const el = document.querySelector(s);
+        if (el) return el;
+      } catch (e) { /* kandidat tidak valid — coba berikutnya */ }
+    }
+    return null;
+  }
+
+  function punyaJalurAPI() {
+    return !!(window.ingatPengambil && window.ingatPengambil.punyaJalurAPI(host));
+  }
 
   function kunciSesi() {
     // Sesi = situs + path percakapan; path biasanya berubah per percakapan (mis. /c/<id>)
@@ -33,10 +65,14 @@
   }
 
   function reset() {
-    if (buffer.length) flush('percakapan berganti');
+    // Percakapan sudah berganti saat fungsi ini jalan, jadi sisa buffer HARUS dikirim lewat jalur DOM:
+    // memanggil API di sini akan menarik percakapan yang baru, bukan yang barusan ditinggalkan.
+    if (buffer.length) kirimDariDom(ambilBuffer(), 'percakapan berganti', sesiId || kunciSesi());
     sesiId = kunciSesi();
     buffer = [];
+    modeCadangan = false;
     setTimeout(cekMulaiOtomatis, 900); // beri DOM waktu merender sebelum diperiksa
+    setTimeout(periksaKesehatanSelektor, 15_000);
   }
 
   // ---- suntik otomatis SEKALI di percakapan baru yang benar-benar kosong (8 Sep 2026) ----
@@ -47,7 +83,7 @@
   // tanpa MCP, sejajar dengan hook SessionStart di Claude Code. Bisa dimatikan di Opsi.
   function percakapanBenarBenarKosong() {
     if (!sel.user || !sel.assistant) return false; // tidak bisa memastikan tanpa selektor pesan
-    return document.querySelectorAll(sel.user).length === 0 && document.querySelectorAll(sel.assistant).length === 0;
+    return pilihSemua(sel.user).length === 0 && pilihSemua(sel.assistant).length === 0;
   }
 
   async function cekMulaiOtomatis() {
@@ -57,7 +93,7 @@
       if (!aktif || !sel.compose) return;
       const kunci = 'ingat_auto_' + host + location.pathname;
       if (sessionStorage.getItem(kunci)) return; // sudah pernah, sekali per percakapan per tab
-      const el = document.querySelector(sel.compose);
+      const el = pilihSatu(sel.compose);
       if (!el || bacaNilaiElemen(el).trim() !== '') return; // hanya kotak yang benar-benar kosong
       if (!percakapanBenarBenarKosong()) return; // hanya percakapan baru, bukan yang sedang dibaca ulang
       sessionStorage.setItem(kunci, '1');
@@ -84,10 +120,12 @@
   }
 
   function pindaiTurunBaru() {
-    if (!aktif || !sel.user || !sel.assistant) return;
+    if (!aktif) return;
+    if (punyaJalurAPI()) jadwalkanIdle(); // jalur API tidak butuh selektor; cukup tahu "ada aktivitas"
+    if (!sel.user || !sel.assistant) return;
     try {
-      const usr = document.querySelectorAll(sel.user);
-      const ast = document.querySelectorAll(sel.assistant);
+      const usr = pilihSemua(sel.user);
+      const ast = pilihSemua(sel.assistant);
       let adaBaru = false;
       for (const el of usr) {
         if (sudahDiproses.has(el)) continue;
@@ -121,28 +159,153 @@
     timerIdle = setTimeout(() => flush('idle 90 detik'), IDLE_FLUSH_MS);
   }
 
-  function flush(alasan) {
-    if (!buffer.length) return;
-    const langkah = buffer.slice(-MAKS_TURN).map((b) => `${b.peran === 'user' ? '🧑' : '🤖'} ${b.teks.slice(0, 300)}`);
-    const promptPertama = (buffer.find((b) => b.peran === 'user') || {}).teks || '';
+  function ambilBuffer() {
+    // Dikosongkan SEBELUM menunggu jaringan, supaya pesan yang masuk selama penantian tidak ikut
+    // terkirim dua kali di flush berikutnya.
+    const isi = buffer;
+    buffer = [];
+    clearTimeout(timerIdle);
+    return isi;
+  }
+
+  function kirimEpisode(pesan, alasan, sesi, instrumenTambahan, idTetap) {
+    if (!aktif || !pesan.length) return;
+    const langkah = pesan.slice(-MAKS_TURN).map((b) => `${b.peran === 'user' ? '🧑' : '🤖'} ${b.teks.slice(0, 300)}`);
+    const promptPertama = (pesan.find((b) => b.peran === 'user') || {}).teks || '';
     const rendah = promptPertama.trim().toLowerCase();
     const koreksi = PREFIKS_KOREKSI.some((p) => rendah.startsWith(p));
-    const isi = `[percakapan ${host}${location.pathname}] ${buffer.length} pesan (${alasan})\n\n` +
-      buffer.map((b) => `${b.waktu.slice(11, 19)} ${b.peran}: ${b.teks}`).join('\n\n');
+    const isi = `[percakapan ${host}${location.pathname}] ${pesan.length} pesan (${alasan})\n\n` +
+      pesan.map((b) => `${String(b.waktu).slice(11, 19)} ${b.peran}: ${b.teks}`).join('\n\n');
     const payload = {
       _host: host,
       isi,
       sumber: `browser:${host}`,
       tier: 'I',
       jenis_kejadian: koreksi ? 'koreksi' : 'sukses',
-      ringkas: (koreksi ? promptPertama.replace(/^\/?koreksi:?\s*/i, '') : `Percakapan ${host}: ${buffer.length} pesan`).slice(0, 200),
-      instrumen: [`browser:${host}`],
+      ringkas: (koreksi ? promptPertama.replace(/^\/?koreksi:?\s*/i, '') : `Percakapan ${host}: ${pesan.length} pesan`).slice(0, 200),
+      instrumen: [`browser:${host}`, ...(instrumenTambahan || [])],
       langkah,
-      sesi: sesiId || kunciSesi(),
+      sesi: sesi || sesiId || kunciSesi(),
     };
+    if (idTetap) payload.id = idTetap; // id deterministik -> server meng-upsert, bukan menumpuk salinan
     chrome.runtime.sendMessage({ jenis: 'kirim_episode', payload }).catch(() => {});
-    buffer = [];
-    clearTimeout(timerIdle);
+  }
+
+  function kirimDariDom(pesan, alasan, sesi) {
+    kirimEpisode(pesan, alasan, sesi, punyaJalurAPI() ? ['jalur:dom-cadangan'] : ['jalur:dom']);
+  }
+
+  // Jalur API mengembalikan SELURUH percakapan tiap kali dipanggil, sementara satu percakapan bisa
+  // di-flush berkali-kali (idle, tab disembunyikan, dibuka lagi besok). Penanda ini menyimpan berapa
+  // pesan yang sudah pernah dikirim supaya yang terkirim hanya selisihnya. Disimpan di
+  // chrome.storage.local, BUKAN sessionStorage: sessionStorage mati bersama tabnya, sehingga membuka
+  // ulang percakapan lama besok akan mengirim ulang seluruh percakapan itu.
+  function kunciPenanda() {
+    return 'api_' + host + location.pathname;
+  }
+
+  async function bacaPenanda() {
+    try {
+      const kunci = kunciPenanda();
+      const d = await chrome.storage.local.get(kunci);
+      return d[kunci] && typeof d[kunci].n === 'number' ? d[kunci].n : 0;
+    } catch (e) { return 0; }
+  }
+
+  async function kirimDariAPI(hasil, alasan, sesi) {
+    let sudah = await bacaPenanda();
+    if (sudah > hasil.pesan.length) sudah = 0; // percakapan dipotong/dijawab ulang dari cabang lain
+    const baru = hasil.pesan.slice(sudah);
+    try { await chrome.storage.local.set({ [kunciPenanda()]: { n: hasil.pesan.length, t: Date.now() } }); } catch (e) {}
+    // id deterministik: kalau penanda sempat hilang dan potongan yang sama terkirim lagi, server
+    // meng-upsert episode yang sama alih-alih menumpuk salinan.
+    const id = `browser:${host}${location.pathname}#${sudah}-${hasil.pesan.length}`;
+    kirimEpisode(baru, `${alasan} · jalur API`, sesi, ['jalur:api-internal'], id);
+  }
+
+  async function flush(alasan) {
+    // Penangkapan dimatikan di Opsi = benar-benar mati, termasuk jalur API. flush dipanggil juga dari
+    // visibilitychange yang tidak lewat pindaiTurunBaru, jadi penjagaannya harus ada di sini.
+    if (!aktif) { ambilBuffer(); return; }
+    const sesi = sesiId || kunciSesi();
+    const antre = ambilBuffer();
+    if (punyaJalurAPI()) {
+      const hasil = await window.ingatPengambil.ambil(host);
+      if (hasil && hasil.ok) {
+        // Hanya bersihkan lencana kalau memang tadi sempat jatuh — supaya titik hijau "ada memori
+        // relevan" tidak ikut terhapus setiap kali jalur API berjalan normal.
+        if (modeCadangan) { modeCadangan = false; bersihkanPeringatan(); }
+        await kirimDariAPI(hasil, alasan, sesi);
+        return; // buffer DOM sengaja dibuang: isinya sudah termuat (lebih lengkap) di hasil API
+      }
+      if (!hasil || hasil.kode !== 'bukan_percakapan') {
+        modeCadangan = true;
+        if (window.ingatPengambil.wajibLewatAPI(host)) laporkanPeringatan(hasil);
+      }
+    }
+    kirimDariDom(antre, alasan, sesi);
+  }
+
+  // ---- jangan pernah gagal diam-diam ----------------------------------------
+  // Kegagalan paling berbahaya di sini bukan error yang kelihatan, tapi episode yang tidak pernah
+  // tersimpan sementara Tuan Muda mengira memorinya aman. Setiap kali jalur utama jatuh, ekstensi
+  // memberi tahu di tiga tempat: lencana ikon, popup, dan satu bisikan kecil di halaman.
+  function laporkanPeringatan(hasil) {
+    const kode = (hasil && hasil.kode) || 'jaringan';
+    const pesan = (hasil && hasil.pesan) || 'Jalur utama ingat gagal; memakai cara cadangan.';
+    chrome.runtime.sendMessage({ jenis: 'peringatan_tangkap', kode, host, pesan }).catch(() => {});
+    const kunci = `ingat_warn_${host}${location.pathname}:${kode}`;
+    try {
+      if (sessionStorage.getItem(kunci)) return; // satu bisikan per jenis masalah per percakapan
+      sessionStorage.setItem(kunci, '1');
+    } catch (e) { /* sessionStorage diblokir — biar muncul lagi, lebih baik berisik daripada diam */ }
+    bisikkan(pesan);
+  }
+
+  function bersihkanPeringatan() {
+    chrome.runtime.sendMessage({ jenis: 'peringatan_beres', host }).catch(() => {});
+  }
+
+  function bisikkan(teks) {
+    try {
+      const kotak = document.createElement('div');
+      kotak.style.cssText =
+        'position:fixed;right:16px;bottom:16px;z-index:2147483646;max-width:340px;padding:12px 14px;' +
+        'border-radius:10px;background:#7a1f1f;color:#fff;font:13px/1.45 -apple-system,system-ui,sans-serif;' +
+        'box-shadow:0 6px 24px rgba(0,0,0,.28)';
+      const judul = document.createElement('b');
+      judul.textContent = 'ingat — perhatian';
+      const isi = document.createElement('div');
+      isi.style.cssText = 'margin-top:4px';
+      isi.textContent = teks;
+      const tutup = document.createElement('button');
+      tutup.textContent = 'Tutup';
+      tutup.style.cssText =
+        'margin-top:8px;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);' +
+        'background:transparent;color:#fff;cursor:pointer';
+      tutup.addEventListener('click', () => kotak.remove());
+      kotak.append(judul, isi, tutup);
+      document.body.appendChild(kotak);
+      setTimeout(() => kotak.remove(), 20_000);
+    } catch (e) { /* halaman aneh — lencana ikon dan popup tetap membawa pesannya */ }
+  }
+
+  // Penjaga untuk situs yang memang bergantung pada DOM (Perplexity dkk.): selektor sudah diisi tapi
+  // tidak mencocokkan apa pun di halaman yang jelas berisi percakapan = selektornya mati.
+  function periksaKesehatanSelektor() {
+    try {
+      if (!aktif || !sel.user || !sel.assistant) return;
+      if (punyaJalurAPI() && !modeCadangan) return; // jalur API yang menanggung, selektor tidak dipakai
+      if (pilihSemua(sel.user).length || pilihSemua(sel.assistant).length) return;
+      const panjang = (document.body.innerText || '').length;
+      if (panjang < 2000) return; // halaman kosong/daftar — wajar tidak ada balon pesan
+      laporkanPeringatan({
+        kode: 'selektor_mati',
+        pesan: `Selektor untuk ${host} tidak lagi mengenali balon pesan mana pun, padahal halaman ini berisi ` +
+          'percakapan. Percakapan di situs ini kemungkinan TIDAK tersimpan. Buka Opsi ekstensi → pilih ulang ' +
+          '"Pilih balon pengguna" dan "Pilih balon AI".',
+      });
+    } catch (e) { /* pemeriksaan kesehatan tidak boleh ikut merusak apa pun */ }
   }
 
   // ---- suntik memori: baca & tulis ke kotak ketik (Sesi 8 Sep 2026) -------
@@ -238,14 +401,14 @@
     if (msg.jenis === 'konfig_berubah') { muatKonfig().then(pasangPelacakDraf); return; }
     if (msg.jenis === 'baca_draft') {
       try {
-        const el = sel.compose ? document.querySelector(sel.compose) : null;
+        const el = sel.compose ? pilihSatu(sel.compose) : null;
         balas({ ok: true, teks: el ? bacaNilaiElemen(el) : '', adaKotak: !!el });
       } catch (e) { balas({ ok: false, pesan: String(e) }); }
       return true; // balasan async
     }
     if (msg.jenis === 'sisipkan_teks') {
       try {
-        const el = sel.compose ? document.querySelector(sel.compose) : null;
+        const el = sel.compose ? pilihSatu(sel.compose) : null;
         if (!el) { balas({ ok: false, pesan: 'Kotak ketik belum dikonfigurasi untuk situs ini — pilih dulu di Opsi.' }); return true; }
         tulisKeKotak(el, (msg.teks || '').slice(0, MAKS_SUNTIK));
         balas({ ok: true });
@@ -263,7 +426,7 @@
   const JEDA_CEK_MS = 4000;   // jangan cek lebih sering dari ini — hormati beban server
 
   function pasangPelacakDraf() {
-    const el = sel.compose ? document.querySelector(sel.compose) : null;
+    const el = sel.compose ? pilihSatu(sel.compose) : null;
     if (!el || el === composeEl) return;
     composeEl = el;
     composeEl.addEventListener('input', () => {
@@ -293,7 +456,10 @@
     let path = location.pathname;
     setInterval(() => { if (location.pathname !== path) { path = location.pathname; reset(); } }, 2000);
 
-    window.addEventListener('beforeunload', () => flush('tab ditutup'));
+    // beforeunload tidak bisa menunggu jaringan: panggilan API pasti dibatalkan saat halaman mati.
+    // Jadi di sini SELALU jalur DOM — apa yang sempat terbaca lebih baik daripada tidak sama sekali;
+    // selisihnya akan dilengkapi jalur API saat percakapan yang sama dibuka lagi.
+    window.addEventListener('beforeunload', () => kirimDariDom(ambilBuffer(), 'tab ditutup', sesiId || kunciSesi()));
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush('tab disembunyikan'); });
   }).catch(() => {});
 })();

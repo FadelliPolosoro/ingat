@@ -13,6 +13,8 @@ from ingat import panel
 from ingat.simpan import Store
 from ingat.vektor import PenyematLokal
 
+from .uji_panel_gui import KasusTk
+
 
 class StatusKoneksi(unittest.TestCase):
     def setUp(self):
@@ -94,38 +96,38 @@ class Siapkan(unittest.TestCase):
         self.assertTrue(os.path.isdir(p))
 
 
-class JendelaKoneksi(unittest.TestCase):
-    """Smoke test: jendela Koneksi AI benar-benar terbangun (Tk asli), bukan cuma helper.
-    Dilewati bila lingkungan tak punya display Tk."""
+class JendelaKoneksi(KasusTk):
+    """Smoke test: jendela Koneksi AI benar-benar terbangun (Tk asli) di atas store nyata.
+
+    Memakai harness Tk bersama dari uji_panel_gui. Sejak tombol Sambungkan ada, jendela ini
+    memeriksa status DI THREAD: tanpa tiruan ia menyentuh jaringan sungguhan, dan threadnya
+    bisa hidup lebih lama dari root-nya — thread yang memegang referensi widget terakhir
+    membuat Tcl menggugurkan seluruh proses uji, bukan cuma uji ini yang gagal."""
 
     def setUp(self):
+        super().setUp()
         self.dir = tempfile.mkdtemp(prefix="ingat-konwin-")
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
         self.store = Store(os.path.join(self.dir, "s"), PenyematLokal())
         self.store.tambah_episode("x", sumber="mcp", tier="I", lingkup="peran:asisten-ai",
                                   jenis_kejadian="sukses", ringkas="r", instrumen=["x"], sesi="s1")
 
-    def tearDown(self):
-        shutil.rmtree(self.dir, ignore_errors=True)
-
     def test_terbangun_tanpa_galat(self):
-        try:
-            import tkinter as tk
-            root = tk.Tk()
-        except Exception as e:  # tanpa display (CI headless)
-            self.skipTest("tanpa display Tk: " + str(e))
-        root.withdraw()
-
         class AppStub:
             pass
         a = AppStub()
         a.store = self.store
-        try:
-            win = panel.bangun_jendela_koneksi(root, a, lambda *_: None)
-            root.update_idletasks()
-            root.update()
-            self.assertTrue(win.winfo_exists())
-        finally:
-            root.destroy()
+        ref = {}
+
+        def bangun():
+            win = self._catat(panel.bangun_jendela_koneksi(self.root, a, lambda *_: None))
+            win.withdraw()
+            ref["win"] = win
+
+        with mock.patch("ingat.sambung.status",
+                        return_value={"lampu": "kuning", "pesan": "-", "butir": []}):
+            self.assertTrue(self._putar(bangun, lambda: "win" in ref))
+            self.assertTrue(ref["win"].winfo_exists())
 
 
 if __name__ == "__main__":

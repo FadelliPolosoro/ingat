@@ -1,5 +1,7 @@
 {
-  "_baca_dulu": "Selektor CSS untuk mengenali balon pesan pengguna vs AI di tiap situs. ChatGPT diisi dengan pola atribut data-message-author-role yang secara umum relatif stabil dan dipakai banyak alat ekspor lain — TETAP VERIFIKASI SENDIRI, bisa berubah kapan saja tanpa pemberitahuan. Empat situs lain SENGAJA dikosongkan: isi sendiri lewat tombol 'Pilih elemen' di popup ekstensi (klik satu balon pesanmu, lalu satu balon jawaban AI, di halaman asli yang sedang kamu buka) — ini lebih tahan lama daripada selektor tebakan, karena struktur tiap situs berubah dari waktu ke waktu dan belum diverifikasi di sini. Peran ketiga 'compose' (kotak ketik) dipakai fitur 'Suntik memori' — juga diisi lewat Pilih elemen.",
+  "_baca_dulu": "Selektor CSS untuk mengenali balon pesan pengguna vs AI di tiap situs. Situs yang belum terisi diisi sendiri lewat tombol 'Pilih elemen' di halaman Opsi (klik satu balon pesanmu, lalu satu balon jawaban AI, di halaman asli yang sedang kamu buka). Peran ketiga 'compose' (kotak ketik) dipakai fitur 'Suntik memori'. TETAP VERIFIKASI SENDIRI — struktur situs berubah kapan saja tanpa pemberitahuan.",
+  "_kandidat_ganda": "Satu nilai boleh berisi beberapa kandidat dipisah '||'. Yang dipakai adalah kandidat PERTAMA yang benar-benar mencocokkan elemen di halaman — bukan gabungan koma, supaya kandidat yang salah tidak ikut menyeret elemen asing masuk ke episode.",
+  "_jalur_api": "claude.ai TIDAK mengandalkan selektor: content.js memanggil API internal Claude (lihat pengambil-api.js) memakai sesi login yang sudah ada, karena kontrak datanya jauh lebih stabil daripada CSS dan memberi percakapan UTUH (DOM hanya merender sebagian percakapan panjang). Selektor claude.ai di bawah hanya CADANGAN bila API gagal — dan kalau sampai dipakai, ekstensi memberi tahu, tidak diam-diam.",
   "chatgpt.com": {
     "user": "[data-turn=user]",
     "assistant": "[data-turn=assistant]",
@@ -13,10 +15,10 @@
     "compose": "#prompt-textarea"
   },
   "claude.ai": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": "[data-testid=\"user-message\"] || .font-user-message",
+    "assistant": ".font-claude-message || .font-claude-response || [data-is-streaming=\"false\"]",
+    "verifikasi": "jalur utama = API internal (pengambil-api.js, 18 Sep 2026); selektor ini hanya CADANGAN bila API gagal — kandidat yang dipakai luas oleh exporter sumber-terbuka, pilih ulang lewat Opsi bila meleset",
+    "compose": "div.ProseMirror || [contenteditable=\"true\"][role=\"textbox\"] || [contenteditable=\"true\"]"
   },
   "gemini.google.com": {
     "user": "user-query",
@@ -43,15 +45,15 @@
     "compose": ""
   },
   "www.perplexity.ai": {
-    "user": "[dir=\"auto\"] .whitespace-pre-line",
-    "assistant": ".prose",
-    "verifikasi": "diverifikasi live 14 Sep 2026 (kelas Tailwind — lebih rapuh, pilih ulang bila situs redesain)",
-    "compose": "[contenteditable=\"true\"][role=\"textbox\"]"
+    "user": "[dir=\"auto\"] .whitespace-pre-line || [data-testid=\"query-title\"]",
+    "assistant": ".prose || [id^=\"markdown-content-\"]",
+    "verifikasi": "diverifikasi live 14 Sep 2026; kandidat kedua = cadangan bila kelas Tailwind berganti. Perplexity tidak punya API internal yang bisa dipastikan seperti Claude — pengambil-api.js hanya MENCOBA /rest/thread/<slug> sekali per percakapan, dan kalau tidak ada, jalur DOM inilah yang sah (tanpa peringatan)",
+    "compose": "[contenteditable=\"true\"][role=\"textbox\"] || textarea[placeholder]"
   },
   "perplexity.ai": {
-    "user": "[dir=\"auto\"] .whitespace-pre-line",
-    "assistant": ".prose",
-    "verifikasi": "diverifikasi live 14 Sep 2026 (kelas Tailwind — lebih rapuh, pilih ulang bila situs redesain)",
-    "compose": "[contenteditable=\"true\"][role=\"textbox\"]"
+    "user": "[dir=\"auto\"] .whitespace-pre-line || [data-testid=\"query-title\"]",
+    "assistant": ".prose || [id^=\"markdown-content-\"]",
+    "verifikasi": "diverifikasi live 14 Sep 2026; kandidat kedua = cadangan bila kelas Tailwind berganti. Perplexity tidak punya API internal yang bisa dipastikan seperti Claude — pengambil-api.js hanya MENCOBA /rest/thread/<slug> sekali per percakapan, dan kalau tidak ada, jalur DOM inilah yang sah (tanpa peringatan)",
+    "compose": "[contenteditable=\"true\"][role=\"textbox\"] || textarea[placeholder]"
   }
 }

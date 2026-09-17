@@ -20,6 +20,18 @@ async function segarkan() {
     const segar = hint && Date.now() - hint.waktu < 120_000; // hint kedaluwarsa 2 menit
     document.getElementById('hintRelevansi').style.display = segar ? 'block' : 'none';
   }
+
+  // Peringatan "jalur utama gagal" dipajang di sini juga, bukan cuma di lencana ikon: lencana mudah
+  // terlewat, dan yang dipertaruhkan adalah percakapan yang dikira tersimpan padahal tidak.
+  const { peringatanTerakhir } = await chrome.storage.local.get('peringatanTerakhir');
+  const kotak = document.getElementById('peringatan');
+  const masihRelevan = peringatanTerakhir && Date.now() - peringatanTerakhir.waktu < 24 * 60 * 60 * 1000;
+  if (masihRelevan) {
+    kotak.textContent = `⚠ ${peringatanTerakhir.host}: ${peringatanTerakhir.pesan}`;
+    kotak.style.display = 'block';
+  } else {
+    kotak.style.display = 'none';
+  }
 }
 document.getElementById('opsi').addEventListener('click', () => chrome.runtime.openOptionsPage());
 

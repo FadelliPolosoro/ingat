@@ -188,6 +188,114 @@ def uji_koneksi(host: str, token, timeout: float = 3.0) -> tuple[bool, str]:
         return False, f"gagal uji token ({type(e).__name__})"
 
 
+# ---- helper bebas-Tkinter untuk tiga modul sambungan (Fase 5) -----------------
+# Semua fungsi di bawah murni teks/keputusan supaya bisa diuji tanpa layar. Yang
+# menyentuh widget tinggal di dalam bangun_jendela_*.
+
+def _aman(win, fn):
+    """Bungkus callback root.after supaya tak menyentuh jendela yang sudah ditutup.
+
+    Worker thread bisa selesai beberapa detik setelah Tuan Muda menutup jendelanya;
+    menyentuh widget mati melempar TclError yang muncul sebagai traceback."""
+    def bungkus():
+        try:
+            if not win.winfo_exists():
+                return
+            fn()
+        except Exception:
+            pass
+    return bungkus
+
+
+def status_startup_aman() -> dict:
+    """`startup.status_startup()` yang tak pernah melempar.
+
+    Dipanggil tiap 5 detik dari segarkan_status(): satu galat tak terduga di sini akan
+    menghentikan seluruh pembaruan status panel, bukan cuma centangnya."""
+    from . import startup
+    try:
+        return startup.status_startup()
+    except Exception as e:
+        return {"aktif": False, "berkas": None, "metode": None, "target": None,
+                "lawas": [], "folder": None, "galat": str(e)}
+
+
+def pesan_lawas_startup(st: dict) -> str | None:
+    """Peringatan bahasa awam bila entri auto-start generasi lama masih ada.
+
+    Bukan sekadar info: entri lama menyalakan server 8765/8790 sebagai proses terpisah
+    sedangkan panel menjalankan keduanya in-process — bila dua-duanya hidup saat boot,
+    port sudah terpakai dan server panel gagal naik tanpa pesan yang jelas. Berkasnya
+    sengaja TIDAK dihapus panel: itu buatan pemasangan lain, keputusan Tuan Muda."""
+    lawas = (st or {}).get("lawas") or []
+    if not lawas:
+        return None
+    nama = ", ".join(os.path.basename(p) for p in lawas)
+    folder = (st or {}).get("folder") or os.path.dirname(lawas[0])
+    return ("PERHATIAN: ada program ingat versi lama yang ikut menyala saat komputer dihidupkan ("
+            + nama + "). Dia memakai pintu yang sama dengan panel ini, jadi panel bisa gagal "
+            "menyala sendiri saat komputer baru hidup. Kalau mau dirapikan, hapus berkas itu lewat "
+            "File Explorer di folder: " + str(folder) + " — panel sengaja tidak menghapusnya sendiri.")
+
+
+def pesan_alih_startup(nyala: bool, hasil: dict) -> str:
+    """Kalimat log setelah centang nyala-otomatis diubah."""
+    h = hasil or {}
+    if nyala:
+        return "Nyala otomatis DIHIDUPKAN — pintasan ditaruh di " + str(h.get("folder") or "folder Startup")
+    n = len(h.get("dihapus") or [])
+    return "Nyala otomatis DIMATIKAN" + (" (" + str(n) + " pintasan dihapus)" if n else "")
+
+
+WARNA_LAMPU = {"hijau": "#15803d", "kuning": "#b45309", "merah": "#b91c1c"}
+
+
+def warna_lampu(lampu) -> str:
+    return WARNA_LAMPU.get(str(lampu or ""), "#6b7280")
+
+
+def baris_butir_sambung(butir: dict) -> str:
+    b = butir or {}
+    return ("✓ " if b.get("ok") else "✗ ") + str(b.get("nama") or "") + " — " + str(b.get("pesan") or "")
+
+
+def baris_hasil_cari(h: dict) -> str:
+    """Satu baris daftar hasil. Skor angka sengaja tidak ditampilkan: 0.61 tidak berarti
+    apa-apa bagi pemakainya, dan None (pointer luapan) akan tampil sebagai nol palsu."""
+    d = h or {}
+    jenis = str(d.get("jenis") or "?")
+    ringkas = str(d.get("ringkas") or d.get("kutipan") or "")
+    tgl = str(d.get("tanggal") or "")
+    return ("[" + jenis + "] " + ringkas + ("  · " + tgl if tgl else "")).strip()
+
+
+def pesan_sumber_cari(sumber) -> str:
+    """Catatan kecil asal hasil. Hanya 'riwayat' yang perlu diberitahukan — sisanya
+    adalah pencarian segar dan tak ada gunanya diumumkan."""
+    return "dari riwayat (hasil pencarian sebelumnya)" if str(sumber or "") == "riwayat" else ""
+
+
+def teks_bukti(bukti: dict) -> str:
+    """Isi verbatim episode untuk kotak bacaan, tanpa istilah teknis di labelnya."""
+    b = bukti or {}
+    kepala = []
+    w = str(b.get("waktu") or "")
+    if w:
+        kepala.append("Waktu: " + w[:16].replace("T", " "))
+    if b.get("ringkas"):
+        kepala.append("Ringkas: " + str(b["ringkas"]))
+    return ("\n".join(kepala) + "\n\n" if kepala else "") + str(b.get("isi") or "")
+
+
+def pesan_galat_bukti(e: BaseException) -> str:
+    """Kegagalan buka_bukti() dalam bahasa sehari-hari — tak boleh ada nama kelas Python."""
+    if isinstance(e, PermissionError):
+        return "Catatan ini ditandai rahasia, jadi isinya tidak dibuka di panel."
+    if isinstance(e, KeyError):
+        return "Catatan aslinya sudah tidak ada di memori."
+    return "Catatan aslinya tidak bisa dibuka sekarang."
+
+
 def bangun_jendela_koneksi(root, app, tulis_log=None):
     """Jendela 'Koneksi AI' (Toplevel): host+token untuk disalin, status klien dari
     store, uji koneksi, dan pandu-pasang ekstensi/MCPB. Module-level supaya bisa
@@ -209,8 +317,8 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
     tok = token_server()
     win = tk.Toplevel(root)
     win.title("ingat — Koneksi AI")
-    win.geometry("580x600")
-    win.minsize(520, 520)
+    win.geometry("580x760")
+    win.minsize(520, 560)
 
     f1 = ttk.LabelFrame(win, text=" Server (isi ini ke ekstensi & klien) ")
     f1.pack(fill="x", padx=12, pady=(12, 6))
@@ -311,6 +419,251 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
 
     ttk.Button(f4, text="Siapkan ekstensi web", command=pasang_ekstensi).pack(side="left", padx=8, pady=8)
     ttk.Button(f4, text="Siapkan MCPB (Claude Desktop)", command=pasang_mcpb).pack(side="left", padx=8, pady=8)
+
+    # -- sambungkan otomatis ke Claude Desktop (melengkapi MCPB, bukan menggantikannya:
+    #    di Claude Desktop 2026 jalur MCPB yang terbukti hidup)
+    from .sambung import putuskan, sambungkan
+    from .sambung import status as status_sambung
+
+    f5 = ttk.LabelFrame(win, text=" Sambungkan otomatis (isi pengaturan Claude Desktop) ")
+    f5.pack(fill="x", padx=12, pady=(0, 12))
+    baris_lampu = ttk.Frame(f5)
+    baris_lampu.pack(fill="x", padx=10, pady=(8, 0))
+    lampu = tk.Label(baris_lampu, text="●", font=("Segoe UI", 15), fg="#6b7280")
+    lampu.pack(side="left")
+    lbl_sambung = ttk.Label(baris_lampu, text="memeriksa…", font=("Segoe UI Semibold", 10))
+    lbl_sambung.pack(side="left", padx=6)
+    rincian = tk.Text(f5, height=3, font=("Segoe UI", 9), wrap="word", state="disabled",
+                      relief="flat", highlightthickness=0, background=win.cget("background"))
+    rincian.pack(fill="x", padx=12, pady=(2, 4))
+
+    def gambar_sambung(s):
+        lampu.config(fg=warna_lampu((s or {}).get("lampu")))
+        lbl_sambung.config(text=str((s or {}).get("pesan") or ""))
+        rincian.configure(state="normal")
+        rincian.delete("1.0", "end")
+        for b in (s or {}).get("butir") or []:
+            rincian.insert("end", baris_butir_sambung(b) + "\n")
+        rincian.configure(state="disabled")
+
+    def periksa_sambungan():
+        lbl_sambung.config(text="memeriksa…")
+
+        def kerja():
+            # status() menguji server lewat jaringan — di thread UI ini membekukan jendela.
+            try:
+                s = status_sambung()
+            except Exception:
+                s = {"lampu": "merah", "pesan": "Keadaan sambungan tidak bisa diperiksa.", "butir": []}
+            root.after(0, _aman(win, lambda: gambar_sambung(s)))
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def _jalankan_sambung(paksa=False):
+        tombol_sambung.config(state="disabled")
+        lbl_sambung.config(text="menyambungkan…")
+
+        def kerja():
+            try:
+                h = sambungkan(paksa=paksa)
+            except Exception:
+                # Pesan modul sambung sudah berbahasa awam; yang lolos ke sini hanya
+                # kegagalan tak terduga, dan str(e)-nya tak berguna bagi pemakainya.
+                h = {"berhasil": False, "pesan": "Penyambungan tidak bisa dijalankan sekarang. Coba lagi sebentar."}
+            root.after(0, _aman(win, lambda: selesai_sambung(h)))
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def selesai_sambung(h):
+        tombol_sambung.config(state="normal")
+        pesan = str((h or {}).get("pesan") or "")
+        tulis_log("sambungkan: " + pesan)
+        if (h or {}).get("berhasil"):
+            messagebox.showinfo("Sambungkan", pesan, parent=win)
+        elif "rusak" in pesan.lower() and messagebox.askyesno(
+                "Pengaturan Claude Desktop rusak",
+                pesan + "\n\nTulis ulang pengaturannya sekarang? Salinan berkas lama tetap dibuat dulu.",
+                parent=win):
+            _jalankan_sambung(paksa=True)
+            return
+        else:
+            messagebox.showerror("Sambungkan", pesan, parent=win)
+        periksa_sambungan()
+
+    def lakukan_sambung():
+        catat_pemakaian("sambungkan")
+        _jalankan_sambung(False)
+
+    def lakukan_putus():
+        if not messagebox.askyesno("Putuskan", "Cabut ingat dari pengaturan Claude Desktop?", parent=win):
+            return
+        catat_pemakaian("putuskan")
+
+        def kerja():
+            try:
+                h = putuskan()
+            except Exception:
+                h = {"berhasil": False, "pesan": "Pemutusan tidak bisa dijalankan sekarang. Coba lagi sebentar."}
+            root.after(0, _aman(win, lambda: selesai_putus(h)))
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def selesai_putus(h):
+        pesan = str((h or {}).get("pesan") or "")
+        tulis_log("putuskan: " + pesan)
+        (messagebox.showinfo if (h or {}).get("berhasil") else messagebox.showerror)("Putuskan", pesan, parent=win)
+        periksa_sambungan()
+
+    baris_tombol = ttk.Frame(f5)
+    baris_tombol.pack(fill="x", padx=10, pady=(0, 8))
+    tombol_sambung = ttk.Button(baris_tombol, text="Sambungkan", command=lakukan_sambung)
+    tombol_sambung.pack(side="left")
+    ttk.Button(baris_tombol, text="Periksa lagi", command=periksa_sambungan).pack(side="left", padx=6)
+    ttk.Button(baris_tombol, text="Putuskan", command=lakukan_putus).pack(side="left")
+    periksa_sambungan()
+    return win
+
+
+def bangun_jendela_cari(root, app, tulis_log=None, gerbang=None, store=None):
+    """Jendela 'Cari memori': satu pertanyaan bebas → kutipan memori yang cocok.
+
+    Tanpa model generatif (keputusan Tuan Muda): yang tampil adalah isi memori apa adanya.
+    Module-level supaya bisa di-smoke-test headless. Mengembalikan Toplevel."""
+    import tkinter as tk
+    from tkinter import ttk
+
+    from .cari_memori import cari
+    if tulis_log is None:
+        tulis_log = lambda *_: None  # noqa: E731
+
+    win = tk.Toplevel(root)
+    win.title("ingat — Cari memori")
+    win.geometry("660x580")
+    win.minsize(540, 480)
+    hasil_ref = {"baris": []}
+
+    atas = ttk.Frame(win)
+    atas.pack(fill="x", padx=12, pady=(12, 2))
+    entri = ttk.Entry(atas, font=("Segoe UI", 11))
+    entri.pack(side="left", fill="x", expand=True, ipady=3)
+    tombol_cari = ttk.Button(atas, text="Cari", width=8)
+    tombol_cari.pack(side="left", padx=(6, 0))
+    lbl_info = ttk.Label(win, text="Ketik apa yang ingin dicari, lalu tekan Enter.",
+                         foreground="#6b7280", font=("Segoe UI", 9))
+    lbl_info.pack(anchor="w", padx=14, pady=(2, 6))
+
+    tengah = ttk.LabelFrame(win, text=" Yang ditemukan ")
+    tengah.pack(fill="both", expand=True, padx=12, pady=(0, 6))
+    daftar = tk.Listbox(tengah, height=8, font=("Segoe UI", 9), activestyle="none",
+                        highlightthickness=0, exportselection=False)
+    gulung = ttk.Scrollbar(tengah, orient="vertical", command=daftar.yview)
+    daftar.configure(yscrollcommand=gulung.set)
+    daftar.pack(side="left", fill="both", expand=True, padx=(6, 0), pady=6)
+    gulung.pack(side="left", fill="y", padx=(0, 6), pady=6)
+
+    bawah = ttk.LabelFrame(win, text=" Isi catatan ")
+    bawah.pack(fill="both", expand=True, padx=12, pady=(0, 6))
+    isi = tk.Text(bawah, height=7, font=("Segoe UI", 10), wrap="word", state="disabled")
+    isi.pack(fill="both", expand=True, padx=6, pady=6)
+
+    kaki = ttk.Frame(win)
+    kaki.pack(fill="x", padx=12, pady=(0, 12))
+    tombol_bukti = ttk.Button(kaki, text="Buka catatan aslinya", state="disabled")
+    tombol_bukti.pack(side="left")
+
+    def tulis_isi(teks):
+        isi.configure(state="normal")
+        isi.delete("1.0", "end")
+        isi.insert("end", teks)
+        isi.configure(state="disabled")
+
+    def terpilih():
+        pilih = daftar.curselection()
+        if not pilih:
+            return None
+        i = int(pilih[0])
+        baris = hasil_ref["baris"]
+        return baris[i] if 0 <= i < len(baris) else None
+
+    def saat_pilih(*_):
+        h = terpilih()
+        if h is None:
+            tombol_bukti.config(state="disabled")
+            return
+        tulis_isi(str(h.get("kutipan") or ""))
+        # hanya episode yang punya catatan asli untuk dibuka
+        tombol_bukti.config(state=("normal" if h.get("id_episode") else "disabled"))
+    daftar.bind("<<ListboxSelect>>", saat_pilih)
+
+    def gambar_hasil(jawab):
+        tombol_cari.config(state="normal")
+        hasil_ref["baris"] = list((jawab or {}).get("hasil") or [])
+        daftar.delete(0, "end")
+        for h in hasil_ref["baris"]:
+            daftar.insert("end", baris_hasil_cari(h))
+        catatan = pesan_sumber_cari((jawab or {}).get("sumber"))
+        if hasil_ref["baris"]:
+            lbl_info.config(text=str(len(hasil_ref["baris"])) + " catatan ditemukan"
+                            + (" · " + catatan if catatan else ""), foreground="#6b7280")
+            daftar.selection_clear(0, "end")
+            daftar.selection_set(0)
+            saat_pilih()
+        else:
+            # pesan dari cari() sudah berbahasa awam; messagebox galat di sini cuma menakuti
+            lbl_info.config(text=str((jawab or {}).get("pesan") or "Tidak ada yang cocok."),
+                            foreground="#b45309")
+            tulis_isi("")
+            tombol_bukti.config(state="disabled")
+        tulis_log("cari: " + str((jawab or {}).get("pertanyaan") or "") + " → "
+                  + str(len(hasil_ref["baris"])) + " hasil")
+
+    def lakukan_cari(*_):
+        teks = entri.get().strip()
+        catat_pemakaian("cari-memori")
+        tombol_cari.config(state="disabled")
+        lbl_info.config(text="mencari…", foreground="#6b7280")
+        daftar.delete(0, "end")
+        hasil_ref["baris"] = []
+        tulis_isi("")
+        tombol_bukti.config(state="disabled")
+
+        def kerja():
+            # penyematan pertanyaan bisa makan 1–2 detik: di thread UI jendela membeku
+            # dan Windows menandainya "Not Responding"
+            try:
+                jawab = cari(teks, gerbang=gerbang, store=store)
+            except Exception:
+                jawab = {"hasil": [], "pesan": "Pencarian gagal dijalankan. Coba sebentar lagi.",
+                         "sumber": "galat", "pertanyaan": teks}
+            root.after(0, _aman(win, lambda: gambar_hasil(jawab)))
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def lakukan_buka_bukti():
+        h = terpilih()
+        if not h or not h.get("id_episode"):
+            return
+        id_episode = str(h["id_episode"])
+        catat_pemakaian("buka-bukti")
+        tombol_bukti.config(state="disabled")
+        lbl_info.config(text="membuka catatan asli…", foreground="#6b7280")
+
+        def kerja():
+            try:
+                bukti, pesan = app.gateway.buka_bukti(id_episode, sesi="panel"), None
+            except Exception as e:
+                bukti, pesan = None, pesan_galat_bukti(e)
+            root.after(0, _aman(win, lambda: selesai_bukti(bukti, pesan)))
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def selesai_bukti(bukti, pesan):
+        tombol_bukti.config(state="normal")
+        if bukti is None:
+            lbl_info.config(text=str(pesan), foreground="#b45309")
+            return
+        tulis_isi(teks_bukti(bukti))
+        lbl_info.config(text="catatan asli ditampilkan di bawah", foreground="#6b7280")
+
+    tombol_cari.config(command=lakukan_cari)
+    tombol_bukti.config(command=lakukan_buka_bukti)
+    entri.bind("<Return>", lakukan_cari)
+    entri.focus_set()
     return win
 
 
@@ -324,6 +677,18 @@ def jalankan(konfig: str | None = None) -> int:
 
     app = Aplikasi(muat_konfig(konfig))
     penanya_ref = {}  # simpan path tanya terakhir untuk tombol Jawab
+
+    # Gerbang+store dibuka SEKALI di sini, bukan tiap pencarian: membuka SQLite dan memuat
+    # vektor per klik membuat kotak cari terasa berat. Objek milik `app` dipakai apa adanya
+    # (bukan cari_memori.buka_gerbang) karena itu objek yang sama, sudah hidup untuk server
+    # in-process, dan menghormati --konfig yang dipilih Tuan Muda.
+    cari_ref = {"gerbang": getattr(app, "gateway", None), "store": getattr(app, "store", None)}
+    if cari_ref["gerbang"] is None:
+        try:
+            from .cari_memori import buka_gerbang
+            cari_ref["gerbang"], cari_ref["store"] = buka_gerbang(app.konfig)
+        except Exception:
+            pass
 
     # ---- server in-process (daemon: mati saat panel ditutup) -----------------
     def _serve():
@@ -448,12 +813,17 @@ def jalankan(konfig: str | None = None) -> int:
         catat_pemakaian("koneksi")
         bangun_jendela_koneksi(root, app, tulis_log)
 
+    def buka_cari():
+        catat_pemakaian("buka-cari")
+        bangun_jendela_cari(root, app, tulis_log, cari_ref["gerbang"], cari_ref["store"])
+
     # -- tombol utama (grid 3 kolom)
     tombol = ttk.Frame(root)
     tombol.pack(fill="x", padx=12, pady=6)
     for i in range(3):
         tombol.columnconfigure(i, weight=1)
     daftar_tombol = [
+        ("Cari memori", buka_cari),
         ("Konsolidasi", lambda: jalankan_aksi("konsolidasi", aksi_konsolidasi)),
         ("Tanya", lambda: jalankan_aksi("tanya", aksi_tanya)),
         ("Jawab", lambda: jalankan_aksi("jawab", aksi_jawab)),
@@ -552,6 +922,45 @@ def jalankan(konfig: str | None = None) -> int:
     lbl_auto = ttk.Label(baris, text="terakhir: —", foreground="#6b7280", font=("Segoe UI", 9))
     lbl_auto.pack(side="left", padx=8)
 
+    # -- nyala otomatis saat Windows menyala
+    # Keadaan centang dibaca dari DISK (ada/tidaknya pintasan), BUKAN dari panel-prefs.json:
+    # kalau Tuan Muda menghapus pintasannya lewat File Explorer, centang harus ikut mati.
+    st_startup_awal = status_startup_aman()
+    startup_var = tk.BooleanVar(value=bool(st_startup_awal.get("aktif")))
+    alih_startup_ref = {"jalan": False}
+
+    def alih_nyala_otomatis():
+        nyala = bool(startup_var.get())
+        catat_pemakaian("startup")
+        alih_startup_ref["jalan"] = True
+        tulis_log("▶ nyala otomatis: " + ("menghidupkan" if nyala else "mematikan") + "…")
+
+        def kerja():
+            # Jalur .lnk memanggil PowerShell (timeout 30 dtk) — di thread UI panel akan membeku.
+            from . import startup
+            try:
+                pesan = pesan_alih_startup(nyala, startup.alih_startup(nyala))
+            except Exception:
+                pesan = ("GAGAL mengubah nyala otomatis. Coba sekali lagi, atau atur sendiri lewat "
+                         "folder Startup Windows.")
+            root.after(0, lambda: selesai_startup(pesan))
+
+        def selesai_startup(pesan):
+            # Centang selalu dikembalikan ke keadaan NYATA di disk supaya tak berbohong saat gagal.
+            st = status_startup_aman()
+            startup_var.set(bool(st.get("aktif")))
+            alih_startup_ref["jalan"] = False
+            tulis_log("  " + pesan)
+            peringat = pesan_lawas_startup(st)
+            if peringat:
+                tulis_log("  " + peringat)
+        threading.Thread(target=kerja, daemon=True).start()
+
+    baris2 = ttk.Frame(otom)
+    baris2.pack(fill="x", padx=8, pady=(0, 8))
+    ttk.Checkbutton(baris2, text="Nyala otomatis saat Windows menyala", variable=startup_var,
+                    command=alih_nyala_otomatis).pack(side="left")
+
     # -- log
     logf = ttk.LabelFrame(root, text=" Aktivitas ")
     logf.pack(fill="both", expand=True, padx=12, pady=(6, 12))
@@ -576,9 +985,18 @@ def jalankan(konfig: str | None = None) -> int:
                 t=dt.datetime.now().strftime("%H:%M:%S")))
         except Exception as ex:
             lbl_status.config(text="status gagal: " + str(ex))
+        # Centang nyala-otomatis ikut disegarkan: pintasan bisa dihapus dari File Explorer
+        # saat panel hidup. Dilewati selagi ada perubahan berjalan supaya tak saling timpa.
+        if not alih_startup_ref["jalan"]:
+            aktif = bool(status_startup_aman().get("aktif"))
+            if aktif != bool(startup_var.get()):
+                startup_var.set(aktif)
         root.after(5000, segarkan_status)
 
     tulis_log("Panel siap. Server serve(8765) + pantau(8790) berjalan in-process.")
+    peringat_awal = pesan_lawas_startup(st_startup_awal)
+    if peringat_awal:
+        tulis_log(peringat_awal)
     perbarui_label_auto()
     jadwalkan_auto()
     if auto_var.get() and _jam_terpilih() > 0:
