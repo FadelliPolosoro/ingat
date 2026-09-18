@@ -186,12 +186,58 @@ const PERCAKAPAN_CLAUDE = {
   periksa('perplexity 404: hasil kedua konsisten', h2.kode === 'bukan_percakapan');
 }
 
-// 8. Situs tanpa jalur API sama sekali.
+// 8. ChatGPT: token dari /api/auth/session → percakapan dari /backend-api/conversation/{id};
+//    pohon mapping dirangkai dari current_node, prompt sistem tersembunyi & simpul non-percakapan dibuang.
+const CGPT_MAP = {
+  title: 'Uji ChatGPT',
+  current_node: 'n3',
+  mapping: {
+    root: { id: 'root', message: null, parent: null, children: ['n0'] },
+    n0: { id: 'n0', parent: 'root', children: ['n1'], message: { author: { role: 'system' }, create_time: 1, content: { content_type: 'text', parts: ['prompt sistem rahasia'] }, metadata: { is_visually_hidden_from_conversation: true } } },
+    n1: { id: 'n1', parent: 'n0', children: ['n2'], message: { author: { role: 'user' }, create_time: 2, content: { content_type: 'text', parts: ['Halo GPT'] } } },
+    n2: { id: 'n2', parent: 'n1', children: ['n3'], message: { author: { role: 'assistant' }, create_time: 3, content: { content_type: 'text', parts: ['Halo Tuan Muda'] } } },
+    n3: { id: 'n3', parent: 'n2', children: [], message: { author: { role: 'user' }, create_time: 4, content: { content_type: 'text', parts: ['lanjut'] } } },
+  },
+};
 {
-  const { ambil } = pasangDunia({ pathname: '/c/1' });
-  periksa('chatgpt: tidak punya jalur API', !ambil.punyaJalurAPI('chatgpt.com'));
+  const { ambil, dipanggil } = pasangDunia({
+    pathname: `/c/${ID}`,
+    jawaban: {
+      '/api/auth/session': { data: { accessToken: 'tok-123' } },
+      ['/backend-api/conversation/' + ID]: { data: CGPT_MAP },
+    },
+  });
+  periksa('chatgpt: punyaJalurAPI', ambil.punyaJalurAPI('chatgpt.com'));
+  periksa('chatgpt: tidak wajib lewat API (jatuh ke DOM aman)', !ambil.wajibLewatAPI('chatgpt.com'));
   const h = await ambil.ambil('chatgpt.com');
-  periksa('chatgpt: ambil() aman dipanggil', h.kode === 'bukan_percakapan' && h.pesan === '');
+  periksa('chatgpt: berhasil', h.ok, JSON.stringify(h));
+  periksa('chatgpt: token diambil dulu', dipanggil[0] === '/api/auth/session', dipanggil[0]);
+  periksa('chatgpt: lalu endpoint percakapan', dipanggil[1] === '/backend-api/conversation/' + ID, dipanggil[1]);
+  periksa('chatgpt: tiga pesan (sistem tersembunyi dibuang)', h.ok && h.pesan.length === 3, h.ok && String(h.pesan.length));
+  periksa('chatgpt: urutan user→assistant→user', pesanKe(h, 0).peran === 'user' && pesanKe(h, 1).peran === 'assistant' && pesanKe(h, 2).peran === 'user');
+  periksa('chatgpt: teks pertama benar', pesanKe(h, 0).teks === 'Halo GPT');
+  periksa('chatgpt: prompt sistem tak bocor', h.ok && !JSON.stringify(h.pesan).includes('rahasia'));
+  periksa('chatgpt: judul terbaca', h.ok && h.judul === 'Uji ChatGPT');
+}
+
+// 9. ChatGPT belum login: /api/auth/session balas 200 {} → belum_login, endpoint percakapan TAK dipanggil.
+{
+  const { ambil, dipanggil } = pasangDunia({
+    pathname: `/c/${ID}`,
+    jawaban: { '/api/auth/session': { data: {} } },
+  });
+  const h = await ambil.ambil('chatgpt.com');
+  periksa('chatgpt logout: kode belum_login', h.kode === 'belum_login', h.kode);
+  periksa('chatgpt logout: tak menembak endpoint percakapan', dipanggil.length === 1, String(dipanggil.length));
+}
+
+// 10. ChatGPT halaman non-percakapan (beranda) → bukan_percakapan, tanpa memanggil apa pun.
+{
+  const { ambil, dipanggil } = pasangDunia({ pathname: '/' });
+  const h = await ambil.ambil('chatgpt.com');
+  periksa('chatgpt beranda: bukan_percakapan', h.kode === 'bukan_percakapan', h.kode);
+  periksa('chatgpt beranda: tidak memanggil apa-apa', dipanggil.length === 0, String(dipanggil.length));
+  periksa('chatgpt beranda: tanpa pesan menakutkan', h.pesan === '');
 }
 
 console.log(`${lulus} periksaan lulus, ${gagal} gagal`);

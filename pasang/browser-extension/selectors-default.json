@@ -5,13 +5,13 @@
   "chatgpt.com": {
     "user": "[data-turn=user]",
     "assistant": "[data-turn=assistant]",
-    "verifikasi": "diverifikasi live 14 Sep 2026 — data-message-author-role=assistant sudah MATI, diganti data-turn",
+    "verifikasi": "jalur utama kini = API internal (pengambil-api.js /backend-api/conversation, 18 Sep 2026, BELUM diverifikasi live — wajibAPI:false, jatuh aman ke DOM). Selektor ini CADANGAN, diverifikasi live 14 Sep 2026 (data-message-author-role sudah MATI, diganti data-turn)",
     "compose": "#prompt-textarea"
   },
   "chat.openai.com": {
     "user": "[data-turn=user]",
     "assistant": "[data-turn=assistant]",
-    "verifikasi": "diverifikasi live 14 Sep 2026 — data-message-author-role=assistant sudah MATI, diganti data-turn",
+    "verifikasi": "sama dengan chatgpt.com: API utama (cadangan DOM data-turn, live 14 Sep 2026)",
     "compose": "#prompt-textarea"
   },
   "claude.ai": {

@@ -40,12 +40,13 @@
     return { ok: false, kode, detail: detail || '', pesan: kalimatGalat(kode, detail) };
   }
 
-  async function ambilJson(url) {
+  async function ambilJson(url, headerTambahan) {
     const kendali = new AbortController();
     const jam = setTimeout(() => kendali.abort(), BATAS_MS);
     let res;
     try {
-      res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' }, signal: kendali.signal });
+      const headers = Object.assign({ Accept: 'application/json' }, headerTambahan || {});
+      res = await fetch(url, { credentials: 'include', headers, signal: kendali.signal });
     } catch (e) {
       return gagal('jaringan', String((e && e.message) || e).slice(0, 80));
     } finally {
@@ -130,6 +131,84 @@
     return { ok: true, sumber: 'api', judul: bersihkan(r.data.name || ''), pesan };
   }
 
+  // ---- ChatGPT --------------------------------------------------------------
+  // Token akses dari GET /api/auth/session (login cookie yang sudah ada) → Bearer untuk
+  // GET /backend-api/conversation/{id}. Balasan berbentuk pohon `mapping` (setiap simpul punya
+  // parent); percakapan aktif dirangkai dengan menaiki parent dari `current_node` lalu dibalik.
+  // BELUM DIVERIFIKASI LIVE di akun Tuan Muda — karena itu wajibAPI:false: kalau gagal apa pun,
+  // ekstensi DIAM-diam turun ke jalur DOM (selektor [data-turn] yang sudah diverifikasi 14 Sep 2026),
+  // tanpa menakut-nakuti. Nilai jalur ini: tahan redesain + percakapan panjang UTUH (DOM virtualisasi).
+
+  function idPercakapanChatGPT() {
+    const m = /\/c\/([0-9a-fA-F-]{16,64})/.exec(location.pathname);
+    return m ? m[1] : '';
+  }
+
+  async function tokenAksesChatGPT() {
+    // /api/auth/session balas 200 {} saat logout (bukan 401), jadi accessToken kosong = belum login.
+    const r = await ambilJson('/api/auth/session');
+    if (!r.ok) return r;
+    const tok = r.data && typeof r.data.accessToken === 'string' ? r.data.accessToken : '';
+    return tok ? { ok: true, token: tok } : gagal('belum_login');
+  }
+
+  function teksPesanChatGPT(isi) {
+    if (!isi || typeof isi !== 'object') return '';
+    // 'text' & 'multimodal_text' = isi percakapan; parts bisa campur string + objek (gambar) → string saja.
+    // 'code'/'execution_output'/'tether_*' sengaja dilewat: itu jejak alat, bukan percakapan.
+    if ((isi.content_type === 'text' || isi.content_type === 'multimodal_text') && Array.isArray(isi.parts)) {
+      return isi.parts.filter((x) => typeof x === 'string').join('\n\n');
+    }
+    return '';
+  }
+
+  function normalkanPesanChatGPT(simpul) {
+    const p = simpul && simpul.message;
+    if (!p || typeof p !== 'object') return null;
+    const peran = p.author && (p.author.role === 'assistant' || p.author.role === 'user') ? p.author.role : '';
+    if (!peran) return null; // system/tool bukan percakapan
+    if (p.metadata && p.metadata.is_visually_hidden_from_conversation) return null; // prompt sistem tersembunyi
+    const teks = bersihkan(teksPesanChatGPT(p.content));
+    if (!teks) return null;
+    const waktu = typeof p.create_time === 'number' ? new Date(p.create_time * 1000).toISOString() : new Date().toISOString();
+    return { peran, teks, waktu };
+  }
+
+  function rangkaiChatGPT(data) {
+    const mapping = data && data.mapping;
+    if (!mapping || typeof mapping !== 'object') return null;
+    let kunci = data.current_node && mapping[data.current_node] ? data.current_node : '';
+    if (!kunci) {
+      // Tanpa current_node: ambil semua simpul berpesan, urut waktu — cadangan, jarang terpakai.
+      const semua = Object.values(mapping).filter((n) => n && n.message);
+      semua.sort((a, b) => ((a.message.create_time || 0) - (b.message.create_time || 0)));
+      return semua;
+    }
+    const rantai = [];
+    const lihat = new Set();
+    while (kunci && mapping[kunci] && !lihat.has(kunci)) {
+      lihat.add(kunci);
+      rantai.push(mapping[kunci]);
+      kunci = mapping[kunci].parent;
+    }
+    rantai.reverse();
+    return rantai;
+  }
+
+  async function ambilChatGPT() {
+    const id = idPercakapanChatGPT();
+    if (!id) return gagal('bukan_percakapan'); // beranda/daftar — tidak ada yang ditarik
+    const t = await tokenAksesChatGPT();
+    if (!t.ok) return t;
+    const r = await ambilJson(`/backend-api/conversation/${encodeURIComponent(id)}`, { Authorization: `Bearer ${t.token}` });
+    if (!r.ok) return r;
+    const rantai = rangkaiChatGPT(r.data);
+    if (!rantai) return gagal('format_asing', 'mapping tidak ada');
+    const pesan = rantai.map(normalkanPesanChatGPT).filter(Boolean);
+    if (!pesan.length) return gagal('format_asing', 'tidak ada pesan berteks');
+    return { ok: true, sumber: 'api', judul: bersihkan(r.data.title || ''), pesan };
+  }
+
   // ---- Perplexity -----------------------------------------------------------
   // Tidak ada endpoint publik yang bisa dipastikan seperti Claude. Yang ada: REST internal
   // /rest/thread/<slug> yang dipakai halamannya sendiri — BELUM DIVERIFIKASI di akun Tuan Muda,
@@ -198,6 +277,8 @@
   // wajibAPI = kegagalan API di situs ini HARUS diberitahukan ke pengguna (jalur DOM cuma cadangan).
   const SITUS = {
     'claude.ai': { ambil: ambilClaude, wajibAPI: true },
+    'chatgpt.com': { ambil: ambilChatGPT, wajibAPI: false },
+    'chat.openai.com': { ambil: ambilChatGPT, wajibAPI: false },
     'www.perplexity.ai': { ambil: ambilPerplexity, wajibAPI: false },
     'perplexity.ai': { ambil: ambilPerplexity, wajibAPI: false },
   };
