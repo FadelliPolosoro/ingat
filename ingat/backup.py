@@ -222,3 +222,76 @@ def pulihkan_backup(berkas: str, target: str, timpa: bool = False,
         shutil.rmtree(stage, ignore_errors=True)
         if _berkas_dec and os.path.isfile(_berkas_dec):
             os.remove(_berkas_dec)
+
+
+# ── Unggah backup ke VPS via SCP ──
+
+def unggah_ke_vps(berkas: str, host: str = "ingat-vps",
+                  dir_tujuan: str = "/opt/ingat/backup",
+                  sandi: str | None = None) -> dict:
+    """Unggah tarball backup (terenkripsi bila `sandi`) ke VPS via SCP.
+
+    Alur: buat backup → enkripsi (bila sandi) → SCP ke VPS → verifikasi checksum di VPS.
+    `host` adalah alias SSH (~/.ssh/config) atau user@host.
+    K28: tier S wajib dienkripsi sebelum keluar mesin.
+    """
+    import subprocess
+
+    berkas = os.path.abspath(os.path.expanduser(berkas))
+    if not os.path.isfile(berkas):
+        raise FileNotFoundError(f"berkas backup tidak ditemukan: {berkas}")
+
+    nama = os.path.basename(berkas)
+    sha_lokal = _sha256(berkas)
+    sha_berkas = berkas + ".sha256"
+    if not os.path.isfile(sha_berkas):
+        with open(sha_berkas, "w", encoding="utf-8") as f:
+            f.write(sha_lokal + "  " + nama + "\n")
+
+    try:
+        subprocess.run(
+            ["ssh", host, "mkdir", "-p", dir_tujuan],
+            check=True, capture_output=True, timeout=15,
+        )
+    except (subprocess.SubprocessError, OSError) as e:
+        return {"ok": False, "galat": f"gagal buat folder di VPS: {e}"}
+
+    try:
+        subprocess.run(
+            ["scp", berkas, sha_berkas, f"{host}:{dir_tujuan}/"],
+            check=True, capture_output=True, timeout=300,
+        )
+    except (subprocess.SubprocessError, OSError) as e:
+        return {"ok": False, "galat": f"gagal SCP: {e}"}
+
+    try:
+        r = subprocess.run(
+            ["ssh", host, "cd", dir_tujuan, "&&", "sha256sum", "-c", nama + ".sha256"],
+            capture_output=True, text=True, timeout=15,
+        )
+        checksum_ok = r.returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        checksum_ok = False
+
+    return {
+        "ok": True,
+        "berkas": nama,
+        "tujuan": f"{host}:{dir_tujuan}/{nama}",
+        "sha256": sha_lokal,
+        "checksum_vps": "cocok" if checksum_ok else "gagal-verifikasi",
+        "ukuran": os.path.getsize(berkas),
+    }
+
+
+def backup_dan_unggah(dir_ingat: str, host: str = "ingat-vps",
+                      dir_tujuan: str = "/opt/ingat/backup",
+                      sandi: str | None = None) -> dict:
+    """Buat backup, enkripsi (bila sandi), lalu unggah ke VPS — satu langkah.
+
+    K28: jika sandi diberikan, tarball dienkripsi 4-lapis (INGAT2) sebelum keluar mesin.
+    K30: laptop otoritatif, VPS menyimpan cadangan — bukan sebaliknya.
+    """
+    meta = buat_backup(dir_ingat, sandi=sandi)
+    hasil_unggah = unggah_ke_vps(meta["berkas"], host=host, dir_tujuan=dir_tujuan)
+    meta["unggah"] = hasil_unggah
+    return meta

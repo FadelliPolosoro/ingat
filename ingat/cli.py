@@ -55,7 +55,10 @@ def utama(argv: list[str] | None = None) -> int:
     bk = sub.add_parser("backup", help="bungkus store+vault+konfigurasi jadi tarball portabel + SHA-256 (A1, pindah perangkat)")
     bk.add_argument("--rumah", default=os.path.expanduser("~/.ingat"), help="folder ingat sumber (default ~/.ingat)")
     bk.add_argument("--keluar", default=None, help="tarball tujuan (default <rumah>/backup/ingat-backup-<waktu>.tar.gz)")
-    bk.add_argument("--sandi", default=None, help="enkripsi tarball dengan sandi (wajib sebelum upload FTP)")
+    bk.add_argument("--sandi", default=None, help="enkripsi tarball dengan sandi (K28: wajib sebelum upload)")
+    bk.add_argument("--vps", action="store_true", help="setelah backup, langsung unggah ke VPS via SCP")
+    bk.add_argument("--host", default="ingat-vps", help="alias SSH VPS (default: ingat-vps)")
+    bk.add_argument("--dir-tujuan", default="/opt/ingat/backup", help="folder tujuan di VPS")
     rs = sub.add_parser("restore", help="pulihkan tarball backup ke folder ingat perangkat baru (A1)")
     rs.add_argument("--berkas", required=True, help="tarball backup")
     rs.add_argument("--target", default=os.path.expanduser("~/.ingat"), help="folder ingat tujuan (default ~/.ingat)")
@@ -198,12 +201,13 @@ def utama(argv: list[str] | None = None) -> int:
         print(json.dumps(pasang(tulis=a.tulis), ensure_ascii=False, indent=2))
         return 0
     if a.perintah == "backup":
-        # Murni operasi berkas (snapshot SQLite + salin) — TIDAK membuka Store/embedder, jadi
-        # tak butuh Ollama hidup dan tak meninggalkan data/ kosong.
-        from .backup import buat_backup
+        from .backup import buat_backup, unggah_ke_vps
         meta = buat_backup(a.rumah, a.keluar, sandi=a.sandi)
-        print(json.dumps({k: meta.get(k) for k in ("berkas", "sha256", "ukuran", "waktu", "ingat_versi", "jumlah")},
+        print(json.dumps({k: meta.get(k) for k in ("berkas", "sha256", "ukuran", "waktu", "ingat_versi", "jumlah", "terenkripsi")},
                          ensure_ascii=False, indent=2))
+        if a.vps:
+            hasil = unggah_ke_vps(meta["berkas"], host=a.host, dir_tujuan=a.dir_tujuan)
+            print(json.dumps(hasil, ensure_ascii=False, indent=2))
         return 0
     if a.perintah == "restore":
         # Dijalankan di perangkat BARU: store belum ada, Ollama mungkin belum jalan — maka
