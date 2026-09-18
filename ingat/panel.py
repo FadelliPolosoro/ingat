@@ -1386,6 +1386,16 @@ def jalankan(konfig: str | None = None) -> int:
         hasil = tag.tandai(app.store)
         tulis_log(f"Selesai: {hasil['ditulis']} episode ditandai dari {hasil['diproses']} total.")
 
+    def _impor_screenpipe():
+        from . import screenpipe
+        st = screenpipe.status()
+        if not st.get("terhubung"):
+            tulis_log(f"Screenpipe: {st.get('pesan', 'tidak ditemukan')}")
+            return
+        tulis_log(f"Screenpipe terhubung: {st.get('layar', 0)} layar, {st.get('audio', 0)} audio")
+        hasil = screenpipe.impor(app.store)
+        tulis_log(f"Impor Screenpipe: {hasil['layar']} layar, {hasil['audio']} audio, {hasil['skip']} skip, {hasil['galat']} galat")
+
     # -- tombol utama (grid 3 kolom)
     tombol = ttk.Frame(root)
     tombol.pack(fill="x", padx=12, pady=6)
@@ -1406,6 +1416,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Rapikan nama", buka_judul),
         ("Kelola memori", buka_memori),
         ("Tag otomatis", lambda: _jalankan_tag()),
+        ("Screenpipe", lambda: _impor_screenpipe()),
     ]
     for idx, (teks, cmd) in enumerate(daftar_tombol):
         ttk.Button(tombol, text=teks, command=cmd).grid(
