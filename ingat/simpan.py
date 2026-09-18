@@ -408,6 +408,24 @@ class Store:
             rows = self.db.execute("SELECT * FROM episode ORDER BY waktu")
         return self._daftar("episode", rows)
 
+    def hapus_episode(self, id_: str) -> bool:
+        """Hapus PERMANEN sebuah episode: baris + vektor + blob dingin. Destruktif — store laptop
+        otoritatif (K30), jadi ini benar-benar melenyapkan. Kembalikan True bila ada yang terhapus."""
+        ep = self.episode(id_)
+        if ep is None:
+            return False
+        with self._kunci:
+            try:
+                self.db.execute("DELETE FROM episode WHERE id=?", (id_,))
+                self.db.execute("DELETE FROM vektor WHERE item_id=? AND jenis='episode'", (id_,))
+                self.db.commit()
+            except BaseException:
+                self.db.rollback()
+                raise
+        if getattr(ep, "isi_ref", ""):
+            self._hapus_dingin(ep.isi_ref)  # blob dihapus setelah baris hilang; yatim aman
+        return True
+
     # ---- pelajaran / prosedur / norma / instrumen -------------------------
     def simpan_pelajaran(self, p: skema.Pelajaran):
         self._upsert("pelajaran", p)

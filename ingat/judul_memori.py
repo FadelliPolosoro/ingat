@@ -200,6 +200,35 @@ def judul_untuk(store, item_id: str) -> str | None:
         return None
 
 
+def set_judul(store, item_id: str, judul: str, otak: str = "manusia") -> None:
+    """Tulis/ubah judul satu memori (mis. edit manual di panel)."""
+    _pastikan_tabel(store)
+    store.db.execute(
+        "INSERT OR REPLACE INTO judul_memori(item_id,judul,otak,waktu) VALUES(?,?,?,?)",
+        (item_id, str(judul or "").strip(), otak, skema.sekarang()),
+    )
+    store.db.commit()
+
+
+def hapus_judul(store, item_id: str) -> None:
+    """Hapus judul satu memori (mis. saat episodenya dihapus)."""
+    try:
+        _pastikan_tabel(store)
+        store.db.execute("DELETE FROM judul_memori WHERE item_id=?", (item_id,))
+        store.db.commit()
+    except Exception:
+        pass
+
+
+def semua_judul(store) -> dict:
+    """{item_id: judul} untuk seluruh memori berjudul — sekali query, buat daftar di panel."""
+    try:
+        _pastikan_tabel(store)
+        return {r["item_id"]: r["judul"] for r in store.db.execute("SELECT item_id, judul FROM judul_memori")}
+    except Exception:
+        return {}
+
+
 def berapa_berjudul(store) -> int:
     try:
         _pastikan_tabel(store)

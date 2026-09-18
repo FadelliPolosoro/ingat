@@ -727,6 +727,227 @@ def bangun_jendela_judul(root, app, tulis_log=None):
     return win
 
 
+def bangun_jendela_memori(root, app, tulis_log=None):
+    """Jendela 'Kelola memori': daftar semua memori (judul rapi + asal + tanggal + tier), cari/filter,
+    lihat isi verbatim, edit judul, hapus, dan ekspor/impor. Rumah bagi judul dari 'Rapikan nama'.
+    Module-level supaya bisa di-smoke-test headless. Mengembalikan Toplevel."""
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+    from . import judul_memori as JM
+    from . import pindah
+    if tulis_log is None:
+        tulis_log = lambda *_: None  # noqa: E731
+
+    win = tk.Toplevel(root)
+    win.title("ingat — Kelola memori")
+    win.geometry("920x640")
+    win.minsize(760, 500)
+    d = {"eps": [], "pilih": None}
+
+    # -- bar atas: cari + jumlah
+    atas = ttk.Frame(win); atas.pack(fill="x", padx=12, pady=(12, 4))
+    ttk.Label(atas, text="Cari:").pack(side="left")
+    cari_var = tk.StringVar()
+    ttk.Entry(atas, textvariable=cari_var).pack(side="left", fill="x", expand=True, padx=(6, 8), ipady=2)
+    lbl_jml = ttk.Label(atas, text="", foreground="#6b7280", font=("Segoe UI", 9))
+    lbl_jml.pack(side="left")
+
+    # -- badan: kiri daftar, kanan detail
+    badan = ttk.Panedwindow(win, orient="horizontal"); badan.pack(fill="both", expand=True, padx=12, pady=4)
+    kiri = ttk.Frame(badan); badan.add(kiri, weight=3)
+    kolom = ("sumber", "tanggal", "tier")
+    tabel = ttk.Treeview(kiri, columns=kolom, show="tree headings", height=18)
+    tabel.heading("#0", text="Judul"); tabel.column("#0", width=340, stretch=True)
+    tabel.heading("sumber", text="Asal"); tabel.column("sumber", width=130, anchor="w")
+    tabel.heading("tanggal", text="Tanggal"); tabel.column("tanggal", width=90, anchor="center")
+    tabel.heading("tier", text="Tier"); tabel.column("tier", width=44, anchor="center")
+    gulir = ttk.Scrollbar(kiri, orient="vertical", command=tabel.yview)
+    tabel.configure(yscrollcommand=gulir.set)
+    tabel.pack(side="left", fill="both", expand=True); gulir.pack(side="right", fill="y")
+
+    kanan = ttk.Frame(badan); badan.add(kanan, weight=2)
+    ttk.Label(kanan, text="Judul (bisa diedit):", font=("Segoe UI", 9)).pack(anchor="w")
+    judul_var = tk.StringVar()
+    ent_judul = ttk.Entry(kanan, textvariable=judul_var); ent_judul.pack(fill="x", pady=(0, 4), ipady=2)
+    baris_j = ttk.Frame(kanan); baris_j.pack(fill="x")
+    btn_simpan = ttk.Button(baris_j, text="Simpan judul", state="disabled")
+    btn_simpan.pack(side="left")
+    btn_hapus = ttk.Button(baris_j, text="Hapus memori", state="disabled")
+    btn_hapus.pack(side="left", padx=6)
+    ttk.Label(kanan, text="Isi memori:", font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 0))
+    isi_box = tk.Text(kanan, font=("Segoe UI", 9), wrap="word", state="disabled")
+    isi_box.pack(fill="both", expand=True, pady=(0, 4))
+
+    def _nama_sumber(s):
+        return JM._NAMA_SUMBER.get(s, s[8:] if str(s).startswith("browser:") else (s or "—"))
+
+    def _muat():
+        d["eps"] = list(reversed(app.store.episode_semua()))  # terbaru dulu
+        _isi_tabel()
+
+    def _isi_tabel(*_):
+        q = cari_var.get().strip().lower()
+        judul_map = JM.semua_judul(app.store)
+        tabel.delete(*tabel.get_children())
+        n = 0
+        for ep in d["eps"]:
+            judul = judul_map.get(ep.id) or (getattr(ep, "ringkas", "") or "")[:60] or ep.id
+            sumber = _nama_sumber(getattr(ep, "sumber", ""))
+            if q and q not in judul.lower() and q not in str(getattr(ep, "sumber", "")).lower() \
+                    and q not in (getattr(ep, "ringkas", "") or "").lower():
+                continue
+            tabel.insert("", "end", iid=ep.id, text=judul,
+                         values=(sumber, str(getattr(ep, "waktu", ""))[:10], getattr(ep, "tier", "")))
+            n += 1
+        lbl_jml.config(text=f"{n} memori")
+
+    def _pilih(*_):
+        sel = tabel.selection()
+        if not sel:
+            return
+        ep = next((e for e in d["eps"] if e.id == sel[0]), None)
+        if ep is None:
+            return
+        d["pilih"] = ep
+        judul_map = JM.semua_judul(app.store)
+        judul_var.set(judul_map.get(ep.id, ""))
+        isi = ""
+        if getattr(ep, "isi_ref", ""):
+            try:
+                isi = app.store.buka_dingin(ep.isi_ref).get("isi", "")
+            except Exception:
+                isi = "(isi tak terbaca)"
+        isi_box.configure(state="normal"); isi_box.delete("1.0", "end")
+        isi_box.insert("end", isi or "(tanpa isi verbatim)"); isi_box.configure(state="disabled")
+        btn_simpan.config(state="normal"); btn_hapus.config(state="normal")
+
+    def _simpan_judul():
+        ep = d["pilih"]
+        if not ep:
+            return
+        JM.set_judul(app.store, ep.id, judul_var.get(), otak="manusia")
+        tabel.item(ep.id, text=judul_var.get().strip() or ep.id)
+        tulis_log("judul diedit: " + ep.id)
+
+    def _hapus():
+        ep = d["pilih"]
+        if not ep:
+            return
+        if not messagebox.askyesno("Hapus memori",
+                "Hapus PERMANEN memori ini? Tak bisa dibatalkan.\n\n" + (judul_var.get() or ep.id),
+                parent=win):
+            return
+        JM.hapus_judul(app.store, ep.id)
+        app.store.hapus_episode(ep.id)
+        d["eps"] = [e for e in d["eps"] if e.id != ep.id]
+        d["pilih"] = None
+        tabel.delete(ep.id)
+        judul_var.set(""); isi_box.configure(state="normal"); isi_box.delete("1.0", "end"); isi_box.configure(state="disabled")
+        btn_simpan.config(state="disabled"); btn_hapus.config(state="disabled")
+        lbl_jml.config(text=f"{len(tabel.get_children())} memori")
+        tulis_log("memori dihapus: " + ep.id)
+
+    def _ekspor():
+        path = filedialog.asksaveasfilename(parent=win, defaultextension=".json",
+                    filetypes=[("JSON", "*.json")], initialfile="ingat-ekspor.json",
+                    title="Ekspor semua memori ke berkas")
+        if not path:
+            return
+        try:
+            data = pindah.ekspor(app.store)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+            messagebox.showinfo("Ekspor", f"{data['jumlah']} memori diekspor ke:\n{path}", parent=win)
+            tulis_log(f"ekspor: {data['jumlah']} memori → {path}")
+        except Exception as e:
+            messagebox.showerror("Ekspor gagal", str(e), parent=win)
+
+    def _impor():
+        path = filedialog.askopenfilename(parent=win, filetypes=[("JSON", "*.json")],
+                    title="Impor memori dari berkas ekspor")
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            lap = pindah.impor(app.store, data, lewati_ada=True)
+            messagebox.showinfo("Impor",
+                f"Diimpor {lap['diimpor']}, dilewati (sudah ada) {lap['dilewati_sudah_ada']}.", parent=win)
+            tulis_log(f"impor: +{lap['diimpor']} memori dari {path}")
+            _muat()
+        except Exception as e:
+            messagebox.showerror("Impor gagal", str(e), parent=win)
+
+    btn_simpan.config(command=_simpan_judul)
+    btn_hapus.config(command=_hapus)
+    cari_var.trace_add("write", _isi_tabel)
+    tabel.bind("<<TreeviewSelect>>", _pilih)
+
+    bawah = ttk.Frame(win); bawah.pack(fill="x", padx=12, pady=(4, 12))
+    ttk.Button(bawah, text="Ekspor semua…", command=_ekspor).pack(side="left")
+    ttk.Button(bawah, text="Impor…", command=_impor).pack(side="left", padx=6)
+    ttk.Button(bawah, text="Segarkan", command=_muat).pack(side="left")
+    ttk.Label(bawah, text="Hapus bersifat permanen (store laptop otoritatif).",
+              foreground="#6b7280", font=("Segoe UI", 8)).pack(side="right")
+
+    def buka_recall():
+        bangun_jendela_recall(root, app, tulis_log)
+
+    _muat()
+    ttk.Button(bawah, text="Pratinjau recall", command=buka_recall).pack(side="left", padx=(12, 0))
+    return win
+
+
+def bangun_jendela_recall(root, app, tulis_log=None):
+    """Transparansi recall: tampilkan apa yang ingat SUNTIKKAN saat chat baru dibuka — peta memori
+    (judul) + aturan (isi penuh) untuk sebuah lingkup, beserta jumlah token. Module-level, testable."""
+    import tkinter as tk
+    from tkinter import ttk
+    if tulis_log is None:
+        tulis_log = lambda *_: None  # noqa: E731
+
+    win = tk.Toplevel(root)
+    win.title("ingat — Pratinjau recall")
+    win.geometry("740x580"); win.minsize(600, 440)
+    atas = ttk.Frame(win); atas.pack(fill="x", padx=12, pady=(12, 4))
+    ttk.Label(atas, text="Lingkup:").pack(side="left")
+    lk = tk.StringVar(value="global")
+    ttk.Entry(atas, textvariable=lk, width=22).pack(side="left", padx=(6, 8))
+    lbl = ttk.Label(atas, text="", foreground="#6b7280", font=("Segoe UI", 9)); lbl.pack(side="left")
+    ttk.Label(win, text="Inilah yang otomatis masuk ke kotak ketik saat Anda buka chat baru.",
+              foreground="#6b7280", font=("Segoe UI", 9)).pack(anchor="w", padx=12)
+    box = tk.Text(win, font=("Consolas", 9), wrap="word", state="disabled")
+    box.pack(fill="both", expand=True, padx=12, pady=6)
+
+    def muat():
+        try:
+            hasil = app.gateway.muat_startup(lingkup=lk.get().strip() or "global", sesi="pratinjau-panel")
+            galat = ""
+        except Exception as e:
+            hasil, galat = None, str(e)
+        box.configure(state="normal"); box.delete("1.0", "end")
+        if galat:
+            lbl.config(text=""); box.insert("end", "gagal: " + galat)
+        else:
+            tok = hasil.get("token", {})
+            lbl.config(text=f"{tok.get('total', 0)} token disuntik")
+            box.insert("end", "# PETA MEMORI (judul yang muncul di awal chat)\n")
+            for b in hasil.get("peta", []):
+                box.insert("end", "  " + b + "\n")
+            box.insert("end", "\n# ATURAN (isi penuh yang disuntik)\n")
+            for a in hasil.get("aturan", []):
+                box.insert("end", a + "\n\n")
+            if hasil.get("pointer"):
+                box.insert("end", f"\n# (+{len(hasil['pointer'])} item tak dimuat penuh — ditarik saat relevan)\n")
+            if not hasil.get("peta") and not hasil.get("aturan"):
+                box.insert("end", "(belum ada pelajaran/prosedur/norma aktif untuk lingkup ini)")
+        box.configure(state="disabled")
+
+    ttk.Button(atas, text="Muat", command=muat).pack(side="right")
+    muat()
+    return win
+
+
 def bangun_jendela_cari(root, app, tulis_log=None, gerbang=None, store=None):
     """Jendela 'Cari memori': satu pertanyaan bebas → kutipan memori yang cocok.
 
@@ -1028,6 +1249,10 @@ def jalankan(konfig: str | None = None) -> int:
         catat_pemakaian("rapikan-nama")
         bangun_jendela_judul(root, app, tulis_log)
 
+    def buka_memori():
+        catat_pemakaian("kelola-memori")
+        bangun_jendela_memori(root, app, tulis_log)
+
     # -- tombol utama (grid 3 kolom)
     tombol = ttk.Frame(root)
     tombol.pack(fill="x", padx=12, pady=6)
@@ -1043,6 +1268,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Buka catatan", lambda: jalankan_aksi("catatan", aksi_catatan)),
         ("Koneksi AI", buka_koneksi),
         ("Rapikan nama", buka_judul),
+        ("Kelola memori", buka_memori),
     ]
     for idx, (teks, cmd) in enumerate(daftar_tombol):
         ttk.Button(tombol, text=teks, command=cmd).grid(

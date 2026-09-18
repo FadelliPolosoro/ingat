@@ -99,6 +99,27 @@ class SidecarStore(unittest.TestCase):
         J.rapikan(self.store, tulis=False)
         self.assertEqual(J.berapa_berjudul(self.store), 0)
 
+    def test_set_dan_hapus_judul_satuan(self):
+        e = self._tambah("x", "mcp", "ringkas")
+        J.set_judul(self.store, e.id, "  Judul Manual  ")
+        self.assertEqual(J.judul_untuk(self.store, e.id), "Judul Manual")
+        self.assertEqual(J.semua_judul(self.store), {e.id: "Judul Manual"})
+        J.hapus_judul(self.store, e.id)
+        self.assertIsNone(J.judul_untuk(self.store, e.id))
+
+    def test_hapus_episode_lenyapkan_baris_vektor_judul(self):
+        e = self._tambah("isi verbatim", "mcp", "ringkas")
+        J.set_judul(self.store, e.id, "judul")
+        self.assertEqual(self.store.db.execute(
+            "SELECT COUNT(*) FROM vektor WHERE item_id=?", (e.id,)).fetchone()[0], 1)
+        self.assertTrue(self.store.hapus_episode(e.id))
+        J.hapus_judul(self.store, e.id)
+        self.assertIsNone(self.store.episode(e.id))
+        self.assertEqual(self.store.db.execute(
+            "SELECT COUNT(*) FROM vektor WHERE item_id=?", (e.id,)).fetchone()[0], 0)
+        self.assertIsNone(J.judul_untuk(self.store, e.id))
+        self.assertFalse(self.store.hapus_episode("ep-tak-ada"))
+
 
 class JendelaJudul(unittest.TestCase):
     """Smoke test: jendela 'Rapikan nama memori' terbangun (Tk asli) di atas store nyata."""
@@ -130,6 +151,80 @@ class JendelaJudul(unittest.TestCase):
 
             def bangun():
                 win = k._catat(panel.bangun_jendela_judul(k.root, a, lambda *_: None))
+                win.withdraw(); ref["win"] = win
+            self.assertTrue(k._putar(bangun, lambda: "win" in ref))
+            self.assertTrue(ref["win"].winfo_exists())
+        finally:
+            k.tearDown()
+
+
+class JendelaMemori(unittest.TestCase):
+    """Smoke test: jendela 'Kelola memori' terbangun (Tk asli) di atas store nyata."""
+
+    def setUp(self):
+        try:
+            from .uji_panel_gui import KasusTk  # noqa: F401
+        except Exception as e:
+            self.skipTest("harness Tk tidak tersedia: " + str(e))
+        self.dir = tempfile.mkdtemp(prefix="ingat-memwin-")
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
+        self.store = Store(os.path.join(self.dir, "s"), PenyematLokal())
+        self.store.tambah_episode("isi", sumber="mcp", tier="I", lingkup="peran:asisten-ai",
+                                  jenis_kejadian="sukses", ringkas="Sebuah memori uji", instrumen=["x"], sesi="s1")
+
+    def test_terbangun_tanpa_galat(self):
+        from .uji_panel_gui import KasusTk
+        from ingat import panel
+
+        class _K(KasusTk):
+            def runTest(self):  # pragma: no cover
+                pass
+        k = _K(); k.setUp()
+        try:
+            class AppStub:
+                pass
+            a = AppStub(); a.store = self.store
+            ref = {}
+
+            def bangun():
+                win = k._catat(panel.bangun_jendela_memori(k.root, a, lambda *_: None))
+                win.withdraw(); ref["win"] = win
+            self.assertTrue(k._putar(bangun, lambda: "win" in ref))
+            self.assertTrue(ref["win"].winfo_exists())
+        finally:
+            k.tearDown()
+
+
+class JendelaRecall(unittest.TestCase):
+    """Smoke test: jendela 'Pratinjau recall' terbangun; memanggil gateway.muat_startup (di-stub)."""
+
+    def setUp(self):
+        try:
+            from .uji_panel_gui import KasusTk  # noqa: F401
+        except Exception as e:
+            self.skipTest("harness Tk tidak tersedia: " + str(e))
+
+    def test_terbangun_tanpa_galat(self):
+        from .uji_panel_gui import KasusTk
+        from ingat import panel
+
+        class _K(KasusTk):
+            def runTest(self):  # pragma: no cover
+                pass
+        k = _K(); k.setUp()
+        try:
+            class GatewayStub:
+                def muat_startup(self, lingkup="global", sesi="", **_):
+                    return {"peta": [f"# peta · {lingkup}"], "aturan": ["pelajaran: contoh"],
+                            "pointer": [], "token": {"peta": 4, "aturan": 3, "total": 7}}
+
+            class AppStub:
+                pass
+            a = AppStub(); a.gateway = GatewayStub()
+            ref = {}
+
+            def bangun():
+                win = k._catat(panel.bangun_jendela_recall(k.root, a, lambda *_: None))
                 win.withdraw(); ref["win"] = win
             self.assertTrue(k._putar(bangun, lambda: "win" in ref))
             self.assertTrue(ref["win"].winfo_exists())
