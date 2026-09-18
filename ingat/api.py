@@ -146,6 +146,15 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 return True
             return self._email_sesi() is not None
 
+        def _ada_kredensial(self) -> bool:
+            """Apakah request MEMBAWA kredensial (header Bearer atau cookie sesi)? Dipakai Penjaga:
+            probe anonim (dashboard menanyakan 'sudah login?' tanpa apa pun) BUKAN serangan dan tak
+            boleh mengeskalasi ban — hanya kredensial yang diberikan TAPI salah yang dihitung gagal.
+            Tanpa beda ini, membuka /dashboard beberapa kali sebelum login membanned IP pengguna sendiri."""
+            if self.headers.get("Authorization", "").startswith("Bearer "):
+                return True
+            return bool(ambil_cookie(self.headers.get("Cookie", ""), "ingat_sesi"))
+
         def _email_sesi(self) -> str | None:
             if not sesi_rahasia:
                 return None
@@ -204,8 +213,10 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 self._kirim(429, {"galat": "terlalu banyak permintaan"})
                 return False
             if not self._auth():
-                # L9: catat gagal + eskalasi
-                if penjaga:
+                # L9: catat gagal + eskalasi — HANYA bila kredensial diberikan tapi salah.
+                # Probe anonim (dashboard cek 'sudah login?' tanpa header/cookie) tak dihitung:
+                # kalau tidak, membuka /dashboard sebelum login akan membanned IP pengguna sendiri.
+                if penjaga and self._ada_kredensial():
                     ua = self.headers.get("User-Agent", "")
                     penjaga.catat_gagal(ip, "token_gagal", ua)
                 self._kirim(401, {"galat": "token tidak valid"})
