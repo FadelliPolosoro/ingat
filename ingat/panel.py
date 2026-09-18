@@ -816,6 +816,10 @@ def bangun_jendela_memori(root, app, tulis_log=None):
     btn_simpan.pack(side="left")
     btn_hapus = ttk.Button(baris_j, text="Hapus memori", state="disabled")
     btn_hapus.pack(side="left", padx=6)
+    btn_riwayat = ttk.Button(baris_j, text="Riwayat", state="disabled")
+    btn_riwayat.pack(side="left", padx=6)
+    btn_pin = ttk.Button(baris_j, text="Sematkan", state="disabled")
+    btn_pin.pack(side="left", padx=6)
     ttk.Label(kanan, text="Isi memori:", font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 0))
     isi_box = tk.Text(kanan, font=("Segoe UI", 9), wrap="word", state="disabled")
     isi_box.pack(fill="both", expand=True, pady=(0, 4))
@@ -861,7 +865,25 @@ def bangun_jendela_memori(root, app, tulis_log=None):
                 isi = "(isi tak terbaca)"
         isi_box.configure(state="normal"); isi_box.delete("1.0", "end")
         isi_box.insert("end", isi or "(tanpa isi verbatim)"); isi_box.configure(state="disabled")
-        btn_simpan.config(state="normal"); btn_hapus.config(state="normal")
+        btn_simpan.config(state="normal"); btn_hapus.config(state="normal"); btn_riwayat.config(state="normal")
+        if app.store.disematkan(ep.id):
+            btn_pin.config(text="Lepas pin", state="normal")
+        else:
+            btn_pin.config(text="Sematkan", state="normal")
+
+    def _toggle_pin():
+        ep = d["pilih"]
+        if not ep:
+            return
+        if app.store.disematkan(ep.id):
+            app.store.lepas_sematan(ep.id)
+            btn_pin.config(text="Sematkan")
+            tulis_log("lepas sematan: " + ep.id)
+        else:
+            app.store.sematkan("episode", ep.id)
+            btn_pin.config(text="Lepas pin")
+            tulis_log("disematkan: " + ep.id)
+    btn_pin.config(command=_toggle_pin)
 
     def _simpan_judul():
         ep = d["pilih"]
@@ -885,9 +907,27 @@ def bangun_jendela_memori(root, app, tulis_log=None):
         d["pilih"] = None
         tabel.delete(ep.id)
         judul_var.set(""); isi_box.configure(state="normal"); isi_box.delete("1.0", "end"); isi_box.configure(state="disabled")
-        btn_simpan.config(state="disabled"); btn_hapus.config(state="disabled")
+        btn_simpan.config(state="disabled"); btn_hapus.config(state="disabled"); btn_riwayat.config(state="disabled")
         lbl_jml.config(text=f"{len(tabel.get_children())} memori")
         tulis_log("memori dihapus: " + ep.id)
+
+    def _lihat_riwayat():
+        ep = d["pilih"]
+        if not ep:
+            return
+        riwayat = app.store.riwayat_perubahan(ep.id)
+        isi_box.configure(state="normal"); isi_box.delete("1.0", "end")
+        if not riwayat:
+            isi_box.insert("end", "(belum ada perubahan tercatat)")
+        else:
+            for r in reversed(riwayat):
+                isi_box.insert("end", f"[{r['waktu'][:16]}] {r['aksi']} oleh {r['oleh']}\n")
+                if r.get('sebelum'):
+                    isi_box.insert("end", f"  sebelum: {r['sebelum']}\n")
+                if r.get('sesudah'):
+                    isi_box.insert("end", f"  sesudah: {r['sesudah']}\n")
+                isi_box.insert("end", "\n")
+        isi_box.configure(state="disabled")
 
     def _ekspor():
         path = filedialog.asksaveasfilename(parent=win, defaultextension=".json",
@@ -922,6 +962,7 @@ def bangun_jendela_memori(root, app, tulis_log=None):
 
     btn_simpan.config(command=_simpan_judul)
     btn_hapus.config(command=_hapus)
+    btn_riwayat.config(command=_lihat_riwayat)
     cari_var.trace_add("write", _isi_tabel)
     tabel.bind("<<TreeviewSelect>>", _pilih)
 

@@ -7,6 +7,9 @@ buka_bukti()   -> L-bukti: isi verbatim satu episode per panggilan
 """
 from __future__ import annotations
 
+import datetime as _dt
+import math as _math
+
 from . import skema
 from .simpan import Store
 from .vektor import skor_hibrida, mmr, kosinus
@@ -17,6 +20,25 @@ PERINGKAT = {
 }
 SKOR_MIN = 0.18
 SKOR_PERINGATAN = 0.30
+
+
+def _bobot_kebaruan(waktu_iso: str | None, separuh_hari: float = 90.0) -> float:
+    """Faktor peluruhan eksponensial 0..1 berdasarkan umur item.
+
+    separuh_hari=90 berarti item berumur 90 hari mendapat bobot 0.5.
+    Item tanpa waktu mendapat 0.5 (netral). Status/peringkat tetap dominan —
+    ini hanya tie-breaker halus supaya item lebih baru menang saat skor mirip.
+    """
+    if not waktu_iso:
+        return 0.5
+    try:
+        t = _dt.datetime.fromisoformat(waktu_iso)
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=_dt.timezone.utc)
+        hari = max(0.0, (_dt.datetime.now(_dt.timezone.utc) - t).total_seconds() / 86400)
+        return _math.pow(0.5, hari / separuh_hari)
+    except Exception:
+        return 0.5
 
 
 def _cocok_lingkungan(berlaku_untuk: dict, lingkungan: dict | None) -> bool:
@@ -112,7 +134,9 @@ class Gateway:
                 peringkat = PERINGKAT["kurasi_manusia"]
             else:
                 peringkat = PERINGKAT["mesin_aktif"]
-            hasil.append({"jenis": "pelajaran", "obj": p, "skor": skor * (0.5 + 0.5 * keyakinan), "peringkat": peringkat,
+            waktu_item = getattr(p, "terakhir_dikonfirmasi", None) or getattr(p, "dibuat", None)
+            kebaruan = _bobot_kebaruan(waktu_item)
+            hasil.append({"jenis": "pelajaran", "obj": p, "skor": skor * (0.5 + 0.5 * keyakinan) * (0.85 + 0.15 * kebaruan), "peringkat": peringkat,
                           "bendera": bendera, "vektor": p._vektor, "keyakinan": keyakinan})
         return hasil
 
@@ -139,7 +163,9 @@ class Gateway:
                 peringkat = PERINGKAT["kurasi_manusia"]
             else:
                 peringkat = PERINGKAT["mesin_aktif"]
-            hasil.append({"jenis": "prosedur", "obj": p, "skor": skor * (0.5 + 0.5 * p.tingkat_berhasil), "peringkat": peringkat,
+            waktu_item = getattr(p, "dibuat", None)
+            kebaruan = _bobot_kebaruan(waktu_item)
+            hasil.append({"jenis": "prosedur", "obj": p, "skor": skor * (0.5 + 0.5 * p.tingkat_berhasil) * (0.85 + 0.15 * kebaruan), "peringkat": peringkat,
                           "bendera": bendera, "vektor": p._vektor})
         return hasil
 
@@ -151,8 +177,11 @@ class Gateway:
             if e.tier == "S" and not sertakan_S:  # K10: tersimpan, tidak muncul tanpa permintaan eksplisit
                 continue
             s = skor_hibrida(qvec, query, e._vektor, e.ringkas)
-            if s >= SKOR_PERINGATAN:
-                kandidat.append({"jenis": "episode", "id": e.id, "ringkas": e.ringkas[:120], "skor": round(s, 3)})
+            waktu_ep = getattr(e, "waktu", None)
+            kebaruan = _bobot_kebaruan(waktu_ep)
+            s_final = s * (0.85 + 0.15 * kebaruan)
+            if s_final >= SKOR_PERINGATAN:
+                kandidat.append({"jenis": "episode", "id": e.id, "ringkas": e.ringkas[:120], "skor": round(s_final, 3)})
         kandidat.sort(key=lambda x: -x["skor"])
         return kandidat[:maks]
 
@@ -191,6 +220,13 @@ class Gateway:
         # dedup MMR pada pool, lalu urutkan arbiter (peringkat, skor)
         pool = mmr(qvec, sorted(kandidat, key=lambda c: -c["skor"]), k=self.k["maks_item"] * 3)
         pool.sort(key=lambda c: (c["peringkat"], -c["skor"]))
+
+        # boost item yang disematkan supaya naik ke atas
+        id_sematan = {s["item_id"] for s in self.store.sematan_semua()}
+        for c in pool:
+            if c["obj"].id in id_sematan:
+                c["peringkat"] = min(c["peringkat"], 1)  # naik ke peringkat norma
+                c["bendera"].append("disematkan")
 
         item, pointer, token = [], [], 0
         for c in pool:
@@ -247,6 +283,25 @@ class Gateway:
 
         # L-aturan: isi pelajaran yang cocok lingkungan + prosedur yang cocok tugas
         aturan, pointer, tok_aturan = [], [], 0
+
+        # Fakta tetap (pin): selalu masuk di awal, kebal peluruhan
+        sematan = self.store.sematan_semua()
+        for s in sematan:
+            if s["jenis"] == "pelajaran":
+                obj = self.store.pelajaran(s["item_id"])
+                if obj and obj.status != "ditarik":
+                    teks = self.render("pelajaran", obj, ["disematkan"])
+                    t = skema.hitung_token(teks)
+                    aturan.insert(0, teks)
+                    tok_aturan += t
+            elif s["jenis"] == "episode":
+                obj = self.store.episode(s["item_id"])
+                if obj:
+                    teks = f"[fakta tetap {obj.id}] {obj.ringkas}"
+                    t = skema.hitung_token(teks)
+                    aturan.insert(0, teks)
+                    tok_aturan += t
+
         urutan: list[tuple[str, object, list[str]]] = []
         for p in pelajaran_aktif:
             if _cocok_lingkungan(p.berlaku_untuk, lingkungan):

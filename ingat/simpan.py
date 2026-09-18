@@ -53,6 +53,12 @@ CREATE TABLE IF NOT EXISTS riwayat_status (
   id INTEGER PRIMARY KEY, waktu TEXT, jenis TEXT, item_id TEXT,
   dari TEXT, ke TEXT, oleh TEXT, alasan TEXT
 );
+CREATE TABLE IF NOT EXISTS riwayat_perubahan (
+  id INTEGER PRIMARY KEY, waktu TEXT NOT NULL, jenis TEXT NOT NULL,
+  item_id TEXT NOT NULL, aksi TEXT NOT NULL,
+  sebelum TEXT, sesudah TEXT, oleh TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_riwayat_item ON riwayat_perubahan(item_id);
 CREATE TABLE IF NOT EXISTS metrik (
   id INTEGER PRIMARY KEY, waktu TEXT, nama TEXT, nilai REAL, konteks TEXT
 );
@@ -75,6 +81,9 @@ CREATE TABLE IF NOT EXISTS transisi_status (
   PRIMARY KEY (jenis, dari, ke)
 );
 CREATE TABLE IF NOT EXISTS meta (kunci TEXT PRIMARY KEY, nilai TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sematan (
+  item_id TEXT PRIMARY KEY, jenis TEXT NOT NULL, waktu TEXT NOT NULL, catatan TEXT
+);
 """
 
 _DDL_TABEL = {
@@ -414,10 +423,14 @@ class Store:
         ep = self.episode(id_)
         if ep is None:
             return False
+        self.catat_perubahan("episode", id_, "hapus",
+                             sebelum=json.dumps({"ringkas": ep.ringkas, "sumber": ep.sumber}),
+                             oleh="manusia")
         with self._kunci:
             try:
                 self.db.execute("DELETE FROM episode WHERE id=?", (id_,))
                 self.db.execute("DELETE FROM vektor WHERE item_id=? AND jenis='episode'", (id_,))
+                self.db.execute("DELETE FROM sematan WHERE item_id=?", (id_,))
                 self.db.commit()
             except BaseException:
                 self.db.rollback()
@@ -425,6 +438,27 @@ class Store:
         if getattr(ep, "isi_ref", ""):
             self._hapus_dingin(ep.isi_ref)  # blob dihapus setelah baris hilang; yatim aman
         return True
+
+    # ---- sematan (fakta tetap / pin) ---------------------------------------
+    def sematkan(self, jenis: str, item_id: str, catatan: str = ""):
+        """Tandai item sebagai fakta tetap — selalu dimuat di startup."""
+        with self._kunci:
+            self.db.execute(
+                "INSERT OR REPLACE INTO sematan(item_id,jenis,waktu,catatan) VALUES(?,?,?,?)",
+                (item_id, jenis, skema.sekarang(), catatan))
+            self.db.commit()
+
+    def lepas_sematan(self, item_id: str) -> bool:
+        with self._kunci:
+            n = self.db.execute("DELETE FROM sematan WHERE item_id=?", (item_id,)).rowcount
+            self.db.commit()
+            return n > 0
+
+    def sematan_semua(self) -> list[dict]:
+        return [dict(b) for b in self.db.execute("SELECT * FROM sematan ORDER BY waktu")]
+
+    def disematkan(self, item_id: str) -> bool:
+        return self.db.execute("SELECT 1 FROM sematan WHERE item_id=?", (item_id,)).fetchone() is not None
 
     # ---- pelajaran / prosedur / norma / instrumen -------------------------
     def simpan_pelajaran(self, p: skema.Pelajaran):
@@ -486,11 +520,29 @@ class Store:
                 self.db.execute(f"UPDATE {jenis} SET ditinjau_manusia=1 WHERE id=?", (id_,))
             self.db.execute("INSERT INTO riwayat_status(waktu,jenis,item_id,dari,ke,oleh,alasan) VALUES(?,?,?,?,?,?,?)",
                             (skema.sekarang(), jenis, id_, obj.status, ke, oleh, alasan))
+            self.db.execute(
+                "INSERT INTO riwayat_perubahan(waktu,jenis,item_id,aksi,sebelum,sesudah,oleh) VALUES(?,?,?,?,?,?,?)",
+                (skema.sekarang(), jenis, id_, "ubah_status",
+                 json.dumps({"status": obj.status}), json.dumps({"status": ke}), oleh))
             self.db.commit()
 
     def riwayat(self, jenis: str, id_: str) -> list[dict]:
         return [dict(b) for b in self.db.execute(
             "SELECT * FROM riwayat_status WHERE jenis=? AND item_id=? ORDER BY id", (jenis, id_))]
+
+    # ---- riwayat perubahan (audit trail) ------------------------------------
+    def catat_perubahan(self, jenis: str, item_id: str, aksi: str,
+                        sebelum: str | None = None, sesudah: str | None = None,
+                        oleh: str = "mesin"):
+        with self._kunci:
+            self.db.execute(
+                "INSERT INTO riwayat_perubahan(waktu,jenis,item_id,aksi,sebelum,sesudah,oleh) VALUES(?,?,?,?,?,?,?)",
+                (skema.sekarang(), jenis, item_id, aksi, sebelum, sesudah, oleh))
+            self.db.commit()
+
+    def riwayat_perubahan(self, item_id: str) -> list[dict]:
+        return [dict(b) for b in self.db.execute(
+            "SELECT * FROM riwayat_perubahan WHERE item_id=? ORDER BY id", (item_id,))]
 
     # ---- panggilan & metrik -----------------------------------------------
     def catat_panggilan(self, sesi: str, lingkup: str, query: str, jumlah: int, token: int, jenis: str):

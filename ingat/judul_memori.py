@@ -14,6 +14,7 @@ lokal) — keduanya `(ep, isi) -> str`, jadi `rapikan(otak_fn=...)` cukup digant
 """
 from __future__ import annotations
 
+import json
 import re
 
 from . import skema
@@ -208,14 +209,20 @@ def set_judul(store, item_id: str, judul: str, otak: str = "manusia") -> None:
         (item_id, str(judul or "").strip(), otak, skema.sekarang()),
     )
     store.db.commit()
+    store.catat_perubahan("episode", item_id, "edit_judul",
+                          sesudah=json.dumps({"judul": judul}), oleh=otak)
 
 
 def hapus_judul(store, item_id: str) -> None:
     """Hapus judul satu memori (mis. saat episodenya dihapus)."""
     try:
         _pastikan_tabel(store)
+        lama = judul_untuk(store, item_id)
         store.db.execute("DELETE FROM judul_memori WHERE item_id=?", (item_id,))
         store.db.commit()
+        if lama:
+            store.catat_perubahan("episode", item_id, "edit_judul",
+                                  sebelum=json.dumps({"judul": lama}), oleh="manusia")
     except Exception:
         pass
 
