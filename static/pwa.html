@@ -147,6 +147,8 @@ body{margin:0;height:100%;background:var(--bg);color:var(--tinta);-webkit-font-s
 .tag-prosedur{background:color-mix(in srgb,var(--hijau) 14%,transparent);color:var(--hijau)}
 .tag-norma{background:color-mix(in srgb,var(--oranye) 14%,transparent);color:var(--oranye)}
 .tag-episode{background:color-mix(in srgb,var(--abu) 14%,transparent);color:var(--abu)}
+.tag-kecil{display:inline-block;font-size:10px;padding:1px 5px;border-radius:4px;
+  background:color-mix(in srgb,var(--tinta2) 12%,transparent);color:var(--tinta2);margin-left:3px}
 
 /* ---- timeline ---- */
 .tl-hari{animation:naik .45s var(--lentur) both}
@@ -211,6 +213,7 @@ body{margin:0;height:100%;background:var(--bg);color:var(--tinta);-webkit-font-s
     <div class="logo" aria-hidden="true"></div>
     <h1>ingat</h1>
     <div class="kanan">
+      <a class="btn-gear" href="/dashboard" title="Dashboard" style="text-decoration:none">&#9638;</a>
       <button class="btn-gear" id="btnKeluar" title="Keluar">&#9881;</button>
     </div>
   </div>
@@ -445,6 +448,8 @@ const WARNA_SUMBER = {
   'chatgpt':         'var(--hijau)',
   'gemini':          'var(--oranye)',
   'perplexity':      'var(--ungu)',
+  'screenpipe:screen':'var(--merah)',
+  'screenpipe:audio': 'var(--merah)',
 };
 function warnaSumber(s) {
   if (!s) return 'var(--abu)';
@@ -474,6 +479,7 @@ async function muatTimeline() {
         html += '<div class="tl-waktu">' + esc(waktu) + '</div>';
         html += '<div class="tl-isi">';
         if (sumber) html += '<span class="badge-sumber" style="background:'+warnaSumber(sumber)+'">'+esc(sumber)+'</span>';
+        html += (ep.tag||[]).map(t => '<span class="tag-kecil">'+esc(t)+'</span>').join('');
         html += '<div class="tl-judul">' + esc(judul) + '</div>';
         if (cuplik) html += '<div class="tl-cuplikan">' + esc(cuplik) + '</div>';
         html += '</div></div>';

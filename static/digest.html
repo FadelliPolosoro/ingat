@@ -96,6 +96,8 @@
   .badge-jenis.koreksi{color:var(--oranye);background:color-mix(in srgb,var(--oranye) 12%,transparent)}
   .badge-jenis.pola{color:var(--ungu);background:color-mix(in srgb,var(--ungu) 12%,transparent)}
   .badge-jenis.kegagalan{color:var(--merah);background:color-mix(in srgb,var(--merah) 12%,transparent)}
+  .tag-kecil{display:inline-block;font-size:10px;padding:1px 5px;border-radius:4px;
+    background:color-mix(in srgb,var(--tinta2) 12%,transparent);color:var(--tinta2);margin-left:3px}
 
   .kosong-teks{text-align:center;padding:20px;color:var(--tinta3);font-size:13px}
   .muat{text-align:center;padding:48px 20px;color:var(--tinta2);font-size:14px}
@@ -138,7 +140,9 @@ var WARNA_PLATFORM = {
   "Gemini":"var(--oranye)",
   "Perplexity":"var(--ungu)",
   "Claude Code":"var(--teal)",
-  "Panel":"var(--abu)"
+  "Panel":"var(--abu)",
+  "Screenpipe Layar":"var(--merah)",
+  "Screenpipe Audio":"var(--merah)"
 };
 function warnaPlatform(n){ return WARNA_PLATFORM[n] || "var(--abu)"; }
 
@@ -217,6 +221,7 @@ function renderHari(d){
             '<span class="badge-sm badge-platform" style="background:'+warnaPlatform(b.platform)+'">'+esc(b.platform||"")+'</span>'+
             (b.tier? '<span class="badge-sm badge-tier">'+esc(b.tier)+'</span>' : '')+
             (b.jenis? '<span class="badge-sm badge-jenis '+jenisKls+'">'+esc(b.jenis)+'</span>' : '')+
+            (b.tag||[]).map(function(t){return '<span class="tag-kecil">'+esc(t)+'</span>';}).join('')+
           '</div>'+
         '</div>';
       list.appendChild(el);

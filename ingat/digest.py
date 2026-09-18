@@ -10,8 +10,11 @@ import datetime as _dt
 from collections import Counter
 
 from . import judul_memori as JM
+from . import tag as TAG
 
 _NAMA_SUMBER = dict(JM._NAMA_SUMBER)
+_NAMA_SUMBER.setdefault("screenpipe:screen", "Screenpipe Layar")
+_NAMA_SUMBER.setdefault("screenpipe:audio", "Screenpipe Audio")
 
 
 def digest_hari(store, tanggal: str | None = None) -> dict:
@@ -23,6 +26,7 @@ def digest_hari(store, tanggal: str | None = None) -> dict:
         tanggal = _dt.date.today().isoformat()
 
     judul_map = JM.semua_judul(store)
+    tag_map = TAG.semua_tag(store)
     eps = [e for e in store.episode_semua()
            if (getattr(e, "waktu", "") or "")[:10] == tanggal]
 
@@ -50,6 +54,7 @@ def digest_hari(store, tanggal: str | None = None) -> dict:
             "platform": nama,
             "tier": getattr(ep, "tier", ""),
             "jenis": jenis,
+            "tag": tag_map.get(ep.id, []),
         })
 
     ringkasan = _buat_ringkasan(len(eps), platform_count, jenis_count)
