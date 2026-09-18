@@ -11,14 +11,14 @@
 
 ## 1. Sikap dasar
 
-Aplikasi desktop = **PANEL KENDALI**, **bukan tiruan Obsidian**. Yang butuh pengalaman Obsidian
-(graph, editing catatan) didelegasikan ke Obsidian asli lewat tombol "buka di Obsidian".
+Aplikasi desktop = **PANEL KENDALI**, **bukan tiruan aplikasi catatan**. Yang butuh pengalaman aplikasi catatan
+(graph, editing catatan) didelegasikan ke aplikasi catatan asli lewat tombol "buka catatan".
 
 ## 2. Prioritas fungsi (berurutan)
 
 1. **Konsolidasi + jawab** — jalankan/lihat loop konsolidasi dan dapatkan jawaban.
 2. **Status** — keadaan sistem sekilas.
-3. **Buka di Obsidian** — lompat ke vault, bukan meniru tampilannya.
+3. **Buka catatan** — lompat ke vault, bukan meniru tampilannya.
 4. **Tempel cepat** — masukkan potongan ke sistem dengan cepat.
 
 `[BELUM DISPESIFIKASIKAN untuk tiap fungsi: layar, aksi persis, endpoint yang dipakai]`
@@ -42,6 +42,6 @@ Aplikasi desktop = **PANEL KENDALI**, **bukan tiruan Obsidian**. Yang butuh peng
 - **Selaras** dengan commit "Mode jauh: hook menulis ke server" — desktop app cocok jadi
   **klien tipis** ke server `ingat`, sejalan dengan tujuan "perangkat boleh dibuang".
 - **Divergensi arah dari K23** (Dashboard web "Papan Bukti"): K23 sengaja dibuat
-  "Obsidian-seperti" dengan graph view force-directed. K29 justru **menjauh** dari meniru Obsidian.
+  "ala aplikasi catatan" dengan graph view force-directed. K29 justru **menjauh** dari meniru aplikasi catatan.
   Artefak berbeda (web dashboard vs desktop app), jadi tidak bentrok langsung — tapi arah desain
   berbeda; dicatat untuk ditinjau apakah keduanya konsisten atau dashboard web perlu disesuaikan.

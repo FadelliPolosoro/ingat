@@ -3,7 +3,7 @@
 //   - blok diapit `---` di awal berkas
 //   - satu kunci per baris: `kunci: nilai`
 //   - nilai: JSON flow (`["a"]`, `{"x":1}`, `"teks"`, 12, true, null) atau string polos
-// Sengaja tanpa pustaka YAML supaya nol dependensi; Obsidian merender bentuk ini normal.
+// Sengaja tanpa pustaka YAML supaya nol dependensi; Aplikasi catatan Markdown merender bentuk ini normal.
 
 export interface HasilFrontmatter {
   data: Record<string, unknown>;

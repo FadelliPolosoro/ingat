@@ -96,7 +96,7 @@ Contoh pembeda: matriks (abad ke-19) dipakai untuk grafika komputer tanpa beruba
 | Versi lama | `bukti` | riwayat + `kontra` | riwayat | Masih mengikat untuk masanya |
 | Diambil lewat | pointer | query + `lingkup` | **pencocokan tugas** + `lingkup` | **tanggal peristiwa** |
 | Divalidasi lewat | — | bukti/kontra | **uji eksekusi** | dokumen resmi |
-| Rumah | Store episodik (dingin) | Obsidian `pelajaran/` | `.claude/rules/*.md`, skill, hook; indeks di Obsidian `prosedur/` | Obsidian `norma/`, satu catatan per versi |
+| Rumah | Store episodik (dingin) | vault `pelajaran/` | `.claude/rules/*.md`, skill, hook; indeks di vault `prosedur/` | vault `norma/`, satu catatan per versi |
 
 **Mengapa Prosedur dipisah dari Pelajaran (R1):** berbeda di tiga sisi — cara diambil (dicocokkan ke *tugas*, bukan ke *query*), cara divalidasi (dengan *dijalankan*, bukan dengan bukti), dan bentuk (bisa kode). Yang sudah ada hari ini — `.claude/rules/*.md`, skill, `jaga.mjs` — adalah memori prosedural yang selama ini hidup di luar model.
 
@@ -302,7 +302,7 @@ Ambang dan lingkup:
    - Cocok & konsisten → tambah ke `bukti`, perbarui `terakhir_dikonfirmasi`, geser `tinjau_setelah`, naikkan `keyakinan`; bila bukti baru dari lingkup berbeda → usulkan perluasan `lingkup`.
    - Cocok & bertentangan → tambah ke `kontra`; jika `kontra` mendominasi → `dipersempit` (tulis domain baru) atau `ditarik`.
    - Tidak cocok → buat `hipotesis` baru (skema 6.2) dengan `lingkup` = lingkup episode.
-4. Hipotesis yang mencapai ambang 7.2 → `status: usulan`, ditulis ke Obsidian `pelajaran/_usulan/`.
+4. Hipotesis yang mencapai ambang 7.2 → `status: usulan`, ditulis ke vault catatan `pelajaran/_usulan/`.
 5. **Hipotesis dan usulan tetap boleh diambil retrieval** dengan `keyakinan ≤ 0.6` dan bendera `belum_ditinjau: true` yang wajib diteruskan ke jawaban agent ("berdasarkan pola yang belum ditinjau: …"). Naik ke `aturan` **hanya** saat Tuan Muda memindahkan berkas dari `_usulan/` ke `pelajaran/` (atau menandai `veto_manusia`).
 6. Semua episode yang diproses → `status: didinginkan`, isi dipindah ke penyimpanan dingin, `isi_ref` diperbarui.
 7. Catat metrik (Bab 11).
@@ -400,7 +400,7 @@ Bila dua item menjawab query yang sama dan bertentangan:
 
 1. Norma otoritatif yang `berlaku` pada `tanggal_peristiwa`
 2. Tampilan konsolidasi norma (hanya bila `berlaku_untuk_tanggal` cocok; selalu berbendera)
-3. Catatan kurasi manusia di Obsidian (`ditinjau_manusia: true`)
+3. Catatan kurasi manusia di vault catatan (`ditinjau_manusia: true`)
 4. Pelajaran/prosedur mesin `aturan`/`aktif` dengan `keyakinan` tertinggi dalam lingkup
 5. `dipersempit` (hanya bila query di dalam domainnya)
 6. `usulan`/`hipotesis` — selalu berbendera `belum_ditinjau`
@@ -429,7 +429,7 @@ Tier mengikuti definisi di `docs/spek-ai-hybrid.md`.
 
 | Tier | Episode | Konsolidasi | Pelajaran/prosedur yang lahir darinya | Norma |
 |---|---|---|---|---|
-| **P** | Normal | Ya, provider apa pun yang lolos gate | Boleh ditulis ke Obsidian | Normal |
+| **P** | Normal | Ya, provider apa pun yang lolos gate | Boleh ditulis ke vault catatan | Normal |
 | **I** | Normal | Ya, **hanya** endpoint terkendali/privat | Boleh; `ringkas`, `pelajaran`, `langkah` tidak boleh memuat nilai/nama internal spesifik | Normal |
 | **S** | **Tersimpan verbatim** (K10), kredensial diredaksi, ditandai `tier: S` otomatis oleh `src/tangkap/tier.ts` bila terdeteksi NIK/NPWP/rekening/kata kunci payroll-pajak | **Default tidak pernah.** Sejak K28: boleh **hanya** ke model lokal, **hanya** di jalur konsolidasi, dan **hanya** bila keempat rem terpasang sekaligus (9.1) | Boleh dari mesin **hanya** bila lolos P11; yang gagal P11 → pelajaran ditulis manusia. Tidak pernah naik status otomatis (rem 4) | Normal — norma bukan data sensitif |
 
@@ -470,7 +470,7 @@ lewat uji lokalitas `base_url`, bukan lewat daftar nama, supaya klien baru tidak
 
 | Lapis | Peran | Ditulis oleh | Kandidat |
 |---|---|---|---|
-| **Kurasi** | Pelajaran/prosedur disetujui + norma | Manusia | Obsidian vault + MCP filesystem (read-only default; tulis hanya ke `_usulan/`). Pola: Karpathy LLM Wiki dengan indeks per direktori |
+| **Kurasi** | Pelajaran/prosedur disetujui + norma | Manusia | Vault catatan + MCP filesystem (read-only default; tulis hanya ke `_usulan/`). Pola: Karpathy LLM Wiki dengan indeks per direktori |
 | **Prosedural** | Rules, skill, hook yang dieksekusi | Manusia (disetujui) | `.claude/rules/*.md`, skill, `jaga.mjs` — sudah ada; hanya perlu indeks + skema 6.5 |
 | **Kerja** | Log tool sesi berjalan, dibuang dari konteks | Sistem | Pola *context offloading* + kanvas Mermaid (implementasi sendiri) |
 | **Episodik** | Riwayat percakapan verbatim + konsolidasi | Sistem | **Pilih satu** mesin episodik — 10.3 |
@@ -485,7 +485,7 @@ lewat uji lokalitas `base_url`, bukan lewat daftar nama, supaya klien baru tidak
 | **Mem0** | Episodik ekstraktif (alternatif) | **Norma** — operasi perbarui/hapus menimpa versi lama | Apache-2.0; Qdrant + Postgres default |
 | **TencentDB Agent Memory** | Referensi pola L0–L3, offloading, `node_id` traceback, aset Skill (= prosedur), ACL per Team/User/Agent (= lingkup) | Dipakai utuh bersama sistem episodik lain | MIT; SQLite + sqlite-vec default |
 | **TurboVec** | Indeks dingin; allowlist kernel = filter `lingkup` dan versi norma | Indeks utama Mem0 (butuh filter metadata); terdistribusi; **drop-in langsung ke MemPalace** (kontrak `where` wajib) | Repo kanonik tampak `RyanCodrai/turbovec` — verifikasi sebelum `pip install`. **TERVERIFIKASI (kode):** API `IdMapIndex(dim, bit_width)`, `add_with_ids`, `search(q, k, allowlist=)`, `remove(id)`, simpan/muat `.tvim`. Jalur ke MemPalace = backend hibrida (10.4-a) |
-| **Zep / Graphiti** | Fakta bitemporal hasil ekstraksi percakapan: edge dengan `t_valid`/`t_invalid` + waktu ingest; invalidasi tanpa buang; query titik-waktu | Membedakan `dicabut` vs `ditarik` (tidak ada — harus lewat atribut `status` kita); **lapisan norma** (graf suksesi peraturan hanya puluhan simpul — Obsidian wikilink + gateway sudah cukup; Graphiti berlebihan) | Paper arXiv 2501.13956. **TERVERIFIKASI (kode, commit b943c9e):** lisensi Apache-2.0; backend Neo4j 5.26 / FalkorDB 1.1.2 / Neptune / Kuzu (deprecated, upstream tak terawat); ada mode embedded `graphiti-core[falkordblite]` (Python ≥3.12, pin `redis<9`); ingest **wajib LLM** dengan structured output (OpenAI/Anthropic/Gemini; model kecil rawan gagal skema). ⚠️ FalkorDB berlisensi **SSPL v1** — lihat 10.4-c |
+| **Zep / Graphiti** | Fakta bitemporal hasil ekstraksi percakapan: edge dengan `t_valid`/`t_invalid` + waktu ingest; invalidasi tanpa buang; query titik-waktu | Membedakan `dicabut` vs `ditarik` (tidak ada — harus lewat atribut `status` kita); **lapisan norma** (graf suksesi peraturan hanya puluhan simpul — wikilink vault + gateway sudah cukup; Graphiti berlebihan) | Paper arXiv 2501.13956. **TERVERIFIKASI (kode, commit b943c9e):** lisensi Apache-2.0; backend Neo4j 5.26 / FalkorDB 1.1.2 / Neptune / Kuzu (deprecated, upstream tak terawat); ada mode embedded `graphiti-core[falkordblite]` (Python ≥3.12, pin `redis<9`); ingest **wajib LLM** dengan structured output (OpenAI/Anthropic/Gemini; model kecil rawan gagal skema). ⚠️ FalkorDB berlisensi **SSPL v1** — lihat 10.4-c |
 | **Letta** | Referensi pola: agent utama tanpa alat edit memori + sleep-time agent di latar; memory blocks = L-aturan | Dipakai utuh (satu lagi stack) | Sleep-time compute, April 2025 |
 | **Karpathy LLM Wiki** | Referensi pola lapisan kurasi: agent mengompilasi sumber ke markdown saling-tertaut; `agents.md` sebagai kendali perilaku | Menggantikan loop konsolidasi (tidak punya bobot/status/lingkup) | Gist April 2026; rusak > ~200 berkas tanpa indeks per direktori |
 
@@ -497,7 +497,7 @@ lewat uji lokalitas `base_url`, bukan lewat daftar nama, supaya klien baru tidak
 | **B. Mem0 (self-host)** | Ekosistem matang, OpenMemory MCP | Ekstraktif (bertentangan P1), butuh LLM saat tulis, berbahaya untuk norma | Integrasi cepat, episodik hanya tier P |
 | **C. Bangun sendiri** | Kontrol penuh skema Bab 6 | Semua tahap ditulis sendiri | Bila A tidak bisa ganti backend (10.4-a) |
 
-**Rekomendasi bersyarat (diperbarui setelah 10.4-a/c):** A untuk episodik — 10.4-a terverifikasi, jadi syaratnya terpenuhi. Mulai dengan backend in-tree `sqlite_exact` (tanpa dependensi tambahan, pencarian eksak, cukup untuk skala awal); TurboVec menjadi **optimasi fase 2**, bukan prasyarat. **Lapisan norma tetap di Obsidian** (frontmatter 6.3 + pencarian bitemporal di gateway); Graphiti **ditunda** — nilainya ada pada ekstraksi fakta dari percakapan, bukan pada graf suksesi peraturan yang hanya puluhan simpul, dan ia menambah kewajiban LLM saat ingest serta pertanyaan lisensi SSPL untuk backend embedded-nya.
+**Rekomendasi bersyarat (diperbarui setelah 10.4-a/c):** A untuk episodik — 10.4-a terverifikasi, jadi syaratnya terpenuhi. Mulai dengan backend in-tree `sqlite_exact` (tanpa dependensi tambahan, pencarian eksak, cukup untuk skala awal); TurboVec menjadi **optimasi fase 2**, bukan prasyarat. **Lapisan norma tetap di vault catatan** (frontmatter 6.3 + pencarian bitemporal di gateway); Graphiti **ditunda** — nilainya ada pada ekstraksi fakta dari percakapan, bukan pada graf suksesi peraturan yang hanya puluhan simpul, dan ia menambah kewajiban LLM saat ingest serta pertanyaan lisensi SSPL untuk backend embedded-nya.
 
 ### 10.4 Titik yang BELUM DIVERIFIKASI
 
@@ -506,8 +506,8 @@ lewat uji lokalitas `base_url`, bukan lewat daftar nama, supaya klien baru tidak
 | a | Backend MemPalace "pluggable" sehingga ChromaDB bisa diganti TurboVec | Baca kode repo resmi via GitHits | Opsi A kehilangan indeks dingin; jatuh ke C |
 | **a — HASIL** | **TERVERIFIKASI, dengan biaya.** Kontrak RFC 001 formal (`mempalace/backends/base.py`): `add/upsert/query/get/delete/count` wajib, `where` metadata (dialek Chroma: `$and/$or`, dll.) **wajib dihormati** — operator yang tak didukung harus melempar `UnsupportedFilterError`, tidak boleh diabaikan diam-diam. Backend pihak ketiga = paket pip dengan entry point `mempalace.backends` (`registry.py`); wajib lolos `tests/_backend_conformance.py`. TurboVec **bukan drop-in** (hanya allowlist ID), tetapi jalurnya jelas: **backend hibrida** = fork `sqlite_exact` (SQLite menyimpan dokumen + metadata, `where` dievaluasi di SQLite/Python → daftar ID) + `IdMapIndex.search(allowlist=...)` TurboVec menggantikan pemeringkatan cosine numpy. Deklarasikan `distance_metric = "ip"` dengan vektor ternormalisasi (kontrak mengizinkan `cosine`/`l2`/`ip`). Perkiraan kerja: satu berkas backend + tes konformansi. Catatan: docstring RFC menyebut sebagian mekanisme (embedder injection, maintenance) masih menyusul di PR lanjutan — antarmuka `spec_version 1.0` bisa bergeser. | — |
 | b | Mem0 bisa memakai `TurboVecStore` lewat adapter LangChain | Baca daftar vector store Mem0 | Hanya relevan bila B |
-| c | Graphiti bisa jalan self-host dengan beban wajar di VPS KVM 1 (Neo4j/FalkorDB) dan lisensinya kompatibel dengan rencana AGPL | Baca README + docs; ukur memori kontainer | Norma tetap di Obsidian + gateway |
-| **c — HASIL** | **TERVERIFIKASI SEBAGIAN — layak dengan tiga syarat.** (1) Lisensi Graphiti **Apache-2.0** → kompatibel untuk dimasukkan ke proyek AGPL. (2) Infra: Neo4j 5.26 adalah server JVM terpisah (GPLv3) — berat untuk KVM 1 yang sudah memikul PostgreSQL 16 + Node + Caddy (angka RAM aktual VPS **belum diukur** di sesi ini; konektor Hostinger tidak termuat). Alternatif ringan: `graphiti-core[falkordblite]` = FalkorDB embedded dalam proses Python (butuh Python ≥3.12 — Ubuntu 24.04 memenuhi; pin `redis<9`). Kuzu deprecated. (3) **FalkorDB berlisensi SSPL v1** (bukan OSI open source): aman untuk pemakaian internal; untuk rilis AGPL publik jangan dibundel — jadikan dependensi opsional yang dipasang pengguna; bila Dashboard Cakti kelak ditawarkan sebagai layanan hosted ke pihak ketiga, kewajiban SSPL §13 perlu tinjauan hukum (saya bukan pengacara). (4) Ingest Graphiti **wajib LLM dengan structured output** dan README memperingatkan model kecil rawan gagal skema → untuk episode tier I hanya boleh lewat endpoint privat yang mendukung structured output dengan baik; model lokal kecil berisiko. **Belum diverifikasi:** apakah tipe entitas/edge kustom Graphiti cukup untuk membawa atribut `status` (`dicabut`/`ditarik`). Ukur memori kontainer tetap PARKIR sampai ada keputusan memakai Graphiti. | Norma tetap di Obsidian + gateway (kini menjadi rekomendasi, bukan fallback) |
+| c | Graphiti bisa jalan self-host dengan beban wajar di VPS KVM 1 (Neo4j/FalkorDB) dan lisensinya kompatibel dengan rencana AGPL | Baca README + docs; ukur memori kontainer | Norma tetap di vault catatan + gateway |
+| **c — HASIL** | **TERVERIFIKASI SEBAGIAN — layak dengan tiga syarat.** (1) Lisensi Graphiti **Apache-2.0** → kompatibel untuk dimasukkan ke proyek AGPL. (2) Infra: Neo4j 5.26 adalah server JVM terpisah (GPLv3) — berat untuk KVM 1 yang sudah memikul PostgreSQL 16 + Node + Caddy (angka RAM aktual VPS **belum diukur** di sesi ini; konektor Hostinger tidak termuat). Alternatif ringan: `graphiti-core[falkordblite]` = FalkorDB embedded dalam proses Python (butuh Python ≥3.12 — Ubuntu 24.04 memenuhi; pin `redis<9`). Kuzu deprecated. (3) **FalkorDB berlisensi SSPL v1** (bukan OSI open source): aman untuk pemakaian internal; untuk rilis AGPL publik jangan dibundel — jadikan dependensi opsional yang dipasang pengguna; bila Dashboard Cakti kelak ditawarkan sebagai layanan hosted ke pihak ketiga, kewajiban SSPL §13 perlu tinjauan hukum (saya bukan pengacara). (4) Ingest Graphiti **wajib LLM dengan structured output** dan README memperingatkan model kecil rawan gagal skema → untuk episode tier I hanya boleh lewat endpoint privat yang mendukung structured output dengan baik; model lokal kecil berisiko. **Belum diverifikasi:** apakah tipe entitas/edge kustom Graphiti cukup untuk membawa atribut `status` (`dicabut`/`ditarik`). Ukur memori kontainer tetap PARKIR sampai ada keputusan memakai Graphiti. | Norma tetap di vault catatan + gateway (kini menjadi rekomendasi, bukan fallback) |
 
 ---
 
@@ -560,7 +560,7 @@ Kelima kasus U1–U5 diambil dari riwayat nyata proyek ini. Sebelum implementasi
 5. Kalibrasi angka Bab 8.2 dan 7.5 setelah dua minggu metrik.
 
 **LANJUT — urutan implementasi setelah keputusan:**
-1. Skema Bab 6 sebagai frontmatter Obsidian + tabel SQLite (episode, instrumen); indeks `prosedur/` untuk rules/skill/hook yang sudah ada.
+1. Skema Bab 6 sebagai frontmatter catatan Markdown + tabel SQLite (episode, instrumen); indeks `prosedur/` untuk rules/skill/hook yang sudah ada.
 2. Gateway `ingat()` + `buka_bukti()` sebagai satu MCP server (Bab 8), termasuk filter `lingkup` dan bitemporal norma.
 3. Harness uji putar-ulang U1–U9 (Bab 12) — **sebelum** job konsolidasi, supaya job diuji sejak hari pertama.
 4. Job konsolidasi (Bab 7) sebagai skrip terjadwal; keluaran ke `_usulan/`.
@@ -655,7 +655,7 @@ Penalaran desain (tidak bersumber): Bab 2, 3, 5, 6, 7, 8, 9, 11, 12 seluruhnya.
 | Memudar / peluruhan | MemoryBank (Ebbinghaus); ACT-R | `tinjau_setelah` + `berlaku_untuk` — kedaluwarsa tanpa kontra |
 | Fakta bitemporal, invalidasi tanpa buang, query titik-waktu | Zep/Graphiti | Empat jalur keluar: `dipersempit` / `dicabut` / `ditarik` / `abadi`; `peralihan` sebagai kolom kelas satu; tampilan konsolidasi non-otoritatif |
 | Piramida L0–L3, offloading, traceback `node_id`, Skill, ACL | TencentDB Agent Memory (2026) | `lingkup` sebagai atribut item (bukan hanya ACL akses); gate retensi P/I/S |
-| Obsidian sebagai rumah yang dikompilasi agent; indeks per direktori | Karpathy LLM Wiki (2026) | Status/bobot/lingkup per catatan; `_usulan/` sebagai antrean tinjau |
+| Vault catatan sebagai rumah yang dikompilasi agent; indeks per direktori | Karpathy LLM Wiki (2026) | Status/bobot/lingkup per catatan; `_usulan/` sebagai antrean tinjau |
 | Anggaran konteks eksplisit | Letta memory blocks; TencentDB cap item/karakter/timeout; MemPalace startup 170 token | Lapisan L-peta/L-aturan/L-tarik/L-bukti dengan angka dan sinyal "cukup" |
 | Simpan verbatim, jangan ekstraksi | MemPalace (2026) | Dipakai sebagai substrat L0 saja; konsolidasi tetap ada di atasnya |
 
@@ -700,7 +700,7 @@ Satu prinsip yang mengikat semua temuan di bawah: **otak bukan perekam video —
 |---|---|---|
 | 0.1 | 2026-09-06 | Kristalisasi awal: tiga jenis, state machine, skema, loop, anti-Spalko, P/I/S, pemetaan lima sistem |
 | 0.2 | 2026-09-06 | R1–R7 hasil analisis kesalahan/kekurangan; Zep/Graphiti, Letta, Karpathy LLM Wiki; uji putar-ulang; Lampiran C |
-| 0.2.1 | 2026-09-06 | Verifikasi kode 10.4-a (MemPalace pluggable: ya, jalur backend hibrida) dan 10.4-c (Graphiti Apache-2.0; FalkorDB embedded tersedia tapi SSPL; ingest wajib LLM). Rekomendasi 10.3 diperbarui: `sqlite_exact` dulu, TurboVec fase 2, norma tetap di Obsidian, Graphiti ditunda |
+| 0.2.1 | 2026-09-06 | Verifikasi kode 10.4-a (MemPalace pluggable: ya, jalur backend hibrida) dan 10.4-c (Graphiti Apache-2.0; FalkorDB embedded tersedia tapi SSPL; ingest wajib LLM). Rekomendasi 10.3 diperbarui: `sqlite_exact` dulu, TurboVec fase 2, norma tetap di vault catatan, Graphiti ditunda |
 | 0.5.4 | 2026-09-08 | K27: `ingat pasang` dipindah sebelum pembuatan Aplikasi — tidak lagi membuat ./data/ingat.sqlite kosong sebagai efek samping; ditemukan lewat instalasi nyata pengguna |
 | 0.5.3 | 2026-09-08 | K26: auth_totp.py (RFC 6238, diverifikasi vektor resmi), rute /auth/totp/masuk + pembatas laju ketat, CLI totp-atur, opsi dashboard ketiga; 13 uji |
 | 0.5.2 | 2026-09-08 | K25: auth_google.py, rute /auth/*, dashboard.html dua jalur (cookie/token), instal-vps.sh, README-google-auth.md; 17 uji |
