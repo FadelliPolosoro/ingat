@@ -111,7 +111,7 @@ def periksa(store: Store, vault_path: str | None) -> dict:
 def perbaiki(store: Store, vault_path: str | None = None, vault=None) -> dict:
     """Perbaiki divergensi. Kembalikan laporan perubahan.
 
-    `vault` = objek Vault (obsidian.Vault) untuk menulis .md yang hilang.
+    `vault` = objek Vault (vault.Vault) untuk menulis .md yang hilang.
     """
     lap = {"bukti_diperbaiki": [], "vault_ditulis": [], "galat": []}
 

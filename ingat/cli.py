@@ -44,7 +44,7 @@ def utama(argv: list[str] | None = None) -> int:
     j.add_argument("--berkas", required=True, help="path berkas tanya-*.md yang sudah diisi")
     k = sub.add_parser("konsolidasi", help="jalankan job konsolidasi")
     k.add_argument("--cepat", action="store_true", help="jalur cepat: hanya episode bobot >= 3")
-    sub.add_parser("sinkron", help="sinkron vault Obsidian -> store")
+    sub.add_parser("sinkron", help="sinkron vault catatan -> store")
     sub.add_parser("bangun-ulang-vektor", help="semat ulang semua item dengan penyemat di konfigurasi sekarang "
                                                "(satu-satunya jalan keluar dari IdentitasEmbedderTidakCocok, K8/K9)")
     e = sub.add_parser("ekspor", help="ekspor semua episode + isi verbatim ke JSON portabel (K30, pindah mesin)")
@@ -236,7 +236,7 @@ def utama(argv: list[str] | None = None) -> int:
         try:
             vp = vault_path if os.path.isdir(vault_path) else None
             if a.perbaiki:
-                from .obsidian import Vault
+                from .vault import Vault
                 v = Vault(vault_path) if vp else None
                 lap = perbaiki(st, vp, v)
                 print(json.dumps(lap, ensure_ascii=False, indent=2))

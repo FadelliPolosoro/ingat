@@ -21,7 +21,7 @@ paths: ["src/tangkap/**", "src/simpan/**", "src/sematkan/**"]
   bersandar pada **tidak adanya jalur tulis sama sekali**, bukan pada penyaringan tier di relay —
   jangan menambah endpoint atau tool tulis yang lolos saat `relay.aktif`. Menambah endpoint POST
   yang mengubah keadaan = daftarkan di `relay.JALUR_TULIS` + uji di `uji/uji_relay.py`.
-- **Pelajaran/prosedur `tier_maks:S` ditahan di laptop (K30, `ingat/obsidian.py`).** Dua lapis:
+- **Pelajaran/prosedur `tier_maks:S` ditahan di laptop (K30, `ingat/vault.py`).** Dua lapis:
   penampungan fisik di `*/_tier-s/` (di-gitignore vault, tak di-push) + backstop
   `Vault.sinkron(lewati_tier_s=True)` yang dipakai relay lewat `Aplikasi.sinkron_vault()`. Jangan
   sinkron di relay tanpa lewat `sinkron_vault()`, dan jangan menulis item tier_maks:S ke folder

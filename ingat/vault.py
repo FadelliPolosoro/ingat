@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Lapis Kurasi: vault Obsidian (Bab 10.1).
+"""Lapis Kurasi: vault catatan Markdown (Bab 10.1).
 
 Arah tulis mesin  : HANYA ke `pelajaran/_usulan/` dan `prosedur/_usulan/` (P5).
 Arah baca         : `pelajaran/`, `prosedur/`, `norma/`, `norma/_konsolidasi/`.

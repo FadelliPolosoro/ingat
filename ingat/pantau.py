@@ -36,7 +36,7 @@ def snapshot(app: Aplikasi) -> dict:
 def graf(app: Aplikasi) -> dict:
     """Graf force-directed: node curated (pelajaran/prosedur/norma/instrumen) dari `bangun_graf`
     PLUS episode sebagai node kecil, dihubungkan ke pelajaran/prosedur yang memakainya sebagai bukti.
-    Episode membuat graf padat (mirip Obsidian). Hanya label ringkas — bukan isi verbatim."""
+    Episode membuat graf padat (mirip graf catatan). Hanya label ringkas — bukan isi verbatim."""
     from .dashboard import bangun_graf
     g = bangun_graf(app)
     id_ep = set()

@@ -15,7 +15,7 @@ import re
 
 from . import skema
 from .gate import JALUR_KONSOLIDASI, Gate
-from .obsidian import Vault
+from .vault import Vault
 from .rem import periksa_abstraksi
 from .simpan import Store
 from .vektor import kosinus, centroid, tumpang_tindih

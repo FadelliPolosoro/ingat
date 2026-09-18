@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Data untuk dashboard visual (Papan Bukti). Bukan wikilink generik seperti Obsidian — edge dihitung
+"""Data untuk dashboard visual (Papan Bukti). Bukan wikilink generik ala aplikasi catatan — edge dihitung
 dari relasi struktural yang benar-benar ada di skema Bab 6: bukti yang sama, norma yang saling
 menggantikan, instrumen yang melahirkan pelajaran. Tanpa dependensi eksternal (SVG + JS tangan sendiri
 di sisi klien, lihat static/dashboard.html)."""

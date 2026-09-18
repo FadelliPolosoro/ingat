@@ -9,7 +9,7 @@ services:
     volumes:
       - ./konfigurasi.json:/app/konfigurasi.json:ro
       - ingat-data:/data
-      - ${INGAT_VAULT_HOST:-./vault}:/vault      # vault Obsidian (sinkron via Obsidian Sync / LiveSync / git)
+      - ${INGAT_VAULT_HOST:-./vault}:/vault      # vault catatan Markdown (sinkron via git / aplikasi sinkron berkas)
     ports:
       - "127.0.0.1:8765:8765"                    # hanya loopback; publik lewat Caddy
     read_only: true

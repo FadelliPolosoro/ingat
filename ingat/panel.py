@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """ingat — Panel Kendali (K29). Aplikasi desktop Tkinter (stdlib, nol-dependency).
 
-Sikap K29: PANEL KENDALI, bukan tiruan Obsidian. Visual kaya (graf, kartu) didelegasikan ke
+Sikap K29: PANEL KENDALI, bukan tiruan aplikasi catatan. Visual kaya (graf, kartu) didelegasikan ke
 dashboard web yang dibuka lewat tombol. Server serve(8765)+pantau(8790) berjalan IN-PROCESS
 (daemon thread) sehingga ini satu aplikasi mandiri — tak perlu .cmd/.vbs auto-start lagi.
-Prioritas fungsi (K29 §2): 1) konsolidasi+jawab 2) status 3) buka Obsidian 4) tempel cepat.
+Prioritas fungsi (K29 §2): 1) konsolidasi+jawab 2) status 3) buka catatan 4) tempel cepat.
 Penanda pemakaian tiap tombol (K29 §3) dicatat ke ~/.ingat/pemakaian.jsonl untuk tinjauan 2-mingguan.
 """
 from __future__ import annotations
@@ -991,7 +991,7 @@ def jalankan(konfig: str | None = None) -> int:
         pen = Penanya(app.store, app.vault, {})
         return "Jawab: " + json.dumps(pen.jawab(path), ensure_ascii=False)
 
-    def aksi_obsidian():
+    def aksi_catatan():
         v = app.konfig.get("vault")
         if not v or not os.path.isdir(v):
             return "vault tidak ada: " + str(v)
@@ -1040,7 +1040,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Jawab", lambda: jalankan_aksi("jawab", aksi_jawab)),
         ("Monitor", lambda: buka("http://127.0.0.1:8790/", "monitor")),
         ("Graf", lambda: buka("http://127.0.0.1:8790/graf", "graf")),
-        ("Buka Obsidian", lambda: jalankan_aksi("obsidian", aksi_obsidian)),
+        ("Buka catatan", lambda: jalankan_aksi("catatan", aksi_catatan)),
         ("Koneksi AI", buka_koneksi),
         ("Rapikan nama", buka_judul),
     ]

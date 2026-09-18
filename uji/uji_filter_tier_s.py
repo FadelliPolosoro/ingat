@@ -20,7 +20,7 @@ import unittest
 
 from ingat import frontmatter, skema
 from ingat.dashboard import bangun_graf
-from ingat.obsidian import Vault
+from ingat.vault import Vault
 from ingat.simpan import Store
 from ingat.vektor import PenyematLokal
 

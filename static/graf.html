@@ -102,7 +102,7 @@ async function muat(){
 }
 
 // Episode tanpa tautan bukti = "lepas". Default disembunyikan: 266 titik tak tertaut hanya jadi
-// debu yang merusak tata letak (Obsidian pun menyaring orphan). Tombol untuk menampilkannya.
+// debu yang merusak tata letak (aplikasi graf catatan pun menyaring orphan). Tombol untuk menampilkannya.
 function bangun(){
   const deg={};
   (mentah.edges||[]).forEach(e=>{ deg[e.a]=(deg[e.a]||0)+1; deg[e.b]=(deg[e.b]||0)+1; });

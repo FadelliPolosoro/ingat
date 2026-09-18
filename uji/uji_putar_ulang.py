@@ -15,7 +15,7 @@ from ingat import frontmatter, skema
 from ingat.gate import Gate
 from ingat.gateway import Gateway
 from ingat.konsolidasi import Konsolidator
-from ingat.obsidian import Vault
+from ingat.vault import Vault
 from ingat.simpan import Store
 from ingat.vektor import PenyematLokal
 

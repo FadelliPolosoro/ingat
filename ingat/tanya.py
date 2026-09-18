@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 import datetime as _dt
 
 from . import frontmatter, skema
-from .obsidian import Vault
+from .vault import Vault
 from .simpan import Store
 
 

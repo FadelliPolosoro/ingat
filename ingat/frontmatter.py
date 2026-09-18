@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Frontmatter untuk catatan Obsidian.
+"""Frontmatter untuk catatan Markdown.
 
 Memakai PyYAML bila tersedia. Tanpa PyYAML, parser subset ini menangani
 persis bentuk yang dipakai skema Bab 6: skalar, list inline `[a, b]`,
@@ -136,7 +136,7 @@ def _tanggal_ke_teks(nilai):
     """PyYAML (resolver bawaan YAML 1.1) mengubah skalar tanggal TELANJANG seperti `2026-01-01`
     menjadi objek Python `datetime.date`/`datetime.datetime` secara otomatis — bukan string.
     Kontrak kita (skema/ingat.sql, docs Bab 6) menyatakan semua waktu adalah TEXT ISO 8601, dan
-    seluruh kode hilir (skema.py, obsidian.py, gateway.py) memperlakukan field bertanggal sebagai
+    seluruh kode hilir (skema.py, vault.py, gateway.py) memperlakukan field bertanggal sebagai
     str (slicing, perbandingan leksikografis, json.dumps). Dibiarkan sebagai date object, ini bug
     laten yang meledak sunyi di mana pun PyYAML terpasang — termasuk Docker produksi (Dockerfile
     memasang pyyaml). Dinetralkan di SATU titik ini: setelah parse, semua date/datetime dipaksa

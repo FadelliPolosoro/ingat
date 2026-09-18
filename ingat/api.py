@@ -63,7 +63,7 @@ def _openapi(host: str) -> dict:
             "/bukti/{id}": {"get": {"summary": "L-bukti: isi verbatim satu episode", "security": [{"bearer": []}], "parameters": [{"name": "id", "in": "path", "required": True, "schema": S}], "responses": {"200": {"description": "OK"}}}},
             "/tanya": {"post": op("Tanya penyedia LLM dengan memori disuntik", {"penyedia": S, "pesan": S, "lingkup": S, "tier": S, "tugas": S, "lingkungan": {"type": "object"}, "sesi": S})},
             "/konsolidasi": {"post": op("Jalankan job konsolidasi", {"jalur": S})},
-            "/sinkron": {"post": op("Sinkron vault Obsidian -> store")},
+            "/sinkron": {"post": op("Sinkron vault catatan -> store")},
             "/instrumen": {"post": op("Daftarkan instrumen baru (7.4)", {"id": S, "nama": S, "dipasang_sejak": S, "cakupan": S, "titik_buta_diketahui": {"type": "array", "items": S}})},
             "/prosedur/{id}/eksekusi": {"post": {"summary": "Catat hasil eksekusi prosedur", "security": [{"bearer": []}], "parameters": [{"name": "id", "in": "path", "required": True, "schema": S}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"berhasil": {"type": "boolean"}}}}}}, "responses": {"200": {"description": "OK"}}}},
             "/metrik": {"get": op("Ringkasan metrik (Bab 11)"),

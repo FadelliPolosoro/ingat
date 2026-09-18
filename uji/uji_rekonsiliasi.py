@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from ingat import rekonsiliasi
-from ingat.obsidian import Vault
+from ingat.vault import Vault
 from ingat.simpan import Store
 from ingat.vektor import PenyematLokal
 

@@ -9,7 +9,7 @@ from . import penyedia as mod_penyedia
 from .gate import Gate
 from .gateway import Gateway
 from .konsolidasi import Konsolidator
-from .obsidian import Vault
+from .vault import Vault
 from .simpan import Store
 from .vektor import PenyematLokal, PenyematHTTP, PenyematOllama
 

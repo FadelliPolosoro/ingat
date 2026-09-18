@@ -21,7 +21,7 @@ import unittest
 
 from ingat.gate import Gate, GateDitolak
 from ingat.konsolidasi import Konsolidator
-from ingat.obsidian import Vault
+from ingat.vault import Vault
 from ingat.rem import RemTierS, alamat_lokal, periksa_abstraksi
 from ingat.simpan import Store
 from ingat.vektor import PenyematLokal

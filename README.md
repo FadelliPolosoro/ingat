@@ -2,7 +2,7 @@
 
 Sistem memori untuk agent AI yang bisa **diperiksa manusia**: empat jenis pengetahuan
 (episode, pelajaran, prosedur, norma), satu state machine status, satu pintu retrieval dengan
-anggaran konteks eksplisit, dan lapisan kurasi berupa berkas markdown biasa (vault Obsidian atau
+anggaran konteks eksplisit, dan lapisan kurasi berupa berkas markdown biasa (vault catatan Markdown atau
 editor apa pun).
 
 Bukan framework. Produknya adalah **kontrak**: `skema/ingat.sql`, format frontmatter, protokol tool
@@ -50,13 +50,13 @@ Setelah seminggu:
 ```
 python3 -m ingat --konfig ~/.ingat/konfigurasi.json metrik        # episode_aktif > 0?
 python3 -m ingat --konfig ~/.ingat/konfigurasi.json konsolidasi
-python3 -m ingat --konfig ~/.ingat/konfigurasi.json tanya         # mesin bertanya → jawab di Obsidian → `jawab --berkas …`
+python3 -m ingat --konfig ~/.ingat/konfigurasi.json tanya         # mesin bertanya → jawab di vault catatan → `jawab --berkas …`
 ```
 
 ## Tata letak
 
 ```
-ingat/                 implementasi rujukan Python: skema, simpan, gateway, konsolidasi, tanya, tangkap (hook), pasang, obsidian, mcp_stdio, api, cli, redaksi, vektor, gate
+ingat/                 implementasi rujukan Python: skema, simpan, gateway, konsolidasi, tanya, tangkap (hook), pasang, vault, mcp_stdio, api, cli, redaksi, vektor, gate
 pasang/                templat hook Claude Code, ekstensi Chrome (tangkap ChatGPT/Claude/Gemini/dst), .mcp.json
 skema/ingat.sql        kontrak penyimpanan (SQL portabel) — target penyelarasan
 uji/                   uji_putar_ulang (U1–U12), uji_tanya, uji_redaksi, uji_penyemat_ollama, uji_kontrak, uji_migrasi; fixture putar-ulang/
@@ -150,7 +150,7 @@ menyaring di atas ini: tier S tidak pernah dikirim ke penyedia mana pun, dipaksa
   timing-safe, rate limit per IP, `X-Forwarded-For` hanya dipercaya di belakang proxy tepercaya, TLS via Caddy.
 - Docker: non-root, `read_only`, `cap_drop: ALL`, `no-new-privileges`, bind ke `127.0.0.1` saja.
 - **Belum diaudit pihak ketiga.** Rate limiter in-memory per proses (reset saat restart, tidak terdistribusi).
-  Vault Obsidian yang disinkron lewat git: jangan push ke remote publik — episode tier S ada di dalamnya.
+  Vault catatan yang disinkron lewat git: jangan push ke remote publik — episode tier S ada di dalamnya.
 - Retrieval brute-force O(n) per query — cepat sampai puluhan ribu item aktif; index (TurboVec-style) = fase 2.
 
 ## Lisensi
