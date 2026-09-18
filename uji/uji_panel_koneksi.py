@@ -3,6 +3,7 @@
 terakhir per sumber (browser:<host> / mcp) dari store, dan baca token server."""
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import tempfile
@@ -124,6 +125,18 @@ class Siapkan(unittest.TestCase):
         p = panel.siapkan_mcpb()
         self.assertEqual(p, os.path.join(self.dir, "mcpb"))
         self.assertTrue(os.path.isdir(p))
+
+    def test_bangun_mcpb_hasilkan_berkas_valid(self):
+        import zipfile
+        p = panel.bangun_mcpb()
+        self.assertEqual(p, os.path.join(self.dir, "ingat.mcpb"))
+        self.assertTrue(os.path.isfile(p))
+        with zipfile.ZipFile(p) as z:
+            self.assertIn("manifest.json", z.namelist())
+            self.assertIn("server/main.py", z.namelist())
+            m = json.loads(z.read("manifest.json"))
+            self.assertTrue(m["server"]["mcp_config"]["command"])  # path python terisi
+            self.assertEqual(m["server"]["entry_point"], "server/main.py")
 
 
 class JendelaKoneksi(KasusTk):

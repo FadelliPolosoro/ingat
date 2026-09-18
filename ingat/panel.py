@@ -227,6 +227,29 @@ def siapkan_mcpb() -> str:
     return tujuan
 
 
+def bangun_mcpb() -> str:
+    """Bangun `ingat.mcpb` SIAP-PASANG (bukan cuma menyalin folder): ZIP berisi manifest.json +
+    server/main.py, dengan path python & konfigurasi mesin ini terisi otomatis. Kembalikan path
+    berkas .mcpb — inilah berkas yang di-'Install Extension…' di Claude Desktop."""
+    import re as _re
+    import zipfile
+    from .sambung import python_untuk_mcp
+    asal = os.path.join(_basis_sumberdaya(), "pasang", "mcpb")
+    with open(os.path.join(asal, "manifest.contoh.json"), "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest["server"]["mcp_config"]["command"] = python_untuk_mcp() or "python"
+    with open(os.path.join(asal, "server", "main.py"), "r", encoding="utf-8") as f:
+        main_py = f.read()
+    # arahkan --konfig ke konfigurasi mesin ini (kalau username beda dari template)
+    konfig = os.path.join(DIR_INGAT, "konfigurasi.json")
+    main_py = _re.sub(r'r"[^"]*\.ingat[\\/]+konfigurasi\.json"', lambda m: 'r"%s"' % konfig, main_py)
+    tujuan = os.path.join(DIR_INGAT, "ingat.mcpb")
+    with zipfile.ZipFile(tujuan, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+        z.writestr("server/main.py", main_py)
+    return tujuan
+
+
 def uji_koneksi(host: str, token, timeout: float = 3.0) -> tuple[bool, str]:
     """Uji server 8765 hidup + token valid. Dijalankan live saat tombol diklik."""
     import urllib.error
@@ -383,8 +406,8 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
     tok = token_server()
     win = tk.Toplevel(root)
     win.title("ingat — Koneksi AI")
-    win.geometry("580x760")
-    win.minsize(520, 560)
+    win.geometry("600x880")
+    win.minsize(560, 620)
 
     f1 = ttk.LabelFrame(win, text=" Server (isi ini ke ekstensi & klien) ")
     f1.pack(fill="x", padx=12, pady=(12, 6))
@@ -462,8 +485,22 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
     ttk.Button(f3, text="Uji koneksi", command=lakukan_uji).pack(side="left")
     lbl_uji.pack(side="left", padx=8)
 
-    f4 = ttk.LabelFrame(win, text=" Sambungkan (langkah manual di browser / Claude Desktop) ")
+    f4 = ttk.LabelFrame(win, text=" Panduan connector — pakai yang mana untuk apa ")
     f4.pack(fill="x", padx=12, pady=(6, 12))
+
+    _PANDUAN = (
+        "AI web (ChatGPT · Gemini · Claude.ai · Perplexity)  →  Ekstensi web\n"
+        "    Tombol di bawah menyiapkan folder di:  ~/.ingat/browser-extension\n"
+        "    Pasang: chrome://extensions → Developer mode → Load unpacked → pilih folder itu.\n"
+        "\n"
+        "Claude Desktop  →  MCPB (cara resmi Claude Desktop 2026)\n"
+        "    Tombol di bawah MEMBANGUN berkas siap-pasang:  ~/.ingat/ingat.mcpb\n"
+        "    Pasang: Settings → Extensions → Advanced → Install Extension… → pilih ingat.mcpb.\n"
+        "\n"
+        "Recall otomatis: buka chat baru yang kosong → memori relevan tersuntik ke kotak ketik\n"
+        "(Anda tinjau lalu kirim; tak pernah terkirim otomatis). Tanpa kata kunci."
+    )
+    ttk.Label(f4, text=_PANDUAN, justify="left", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(8, 4))
 
     def pasang_ekstensi():
         try:
@@ -474,41 +511,52 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
             except Exception:
                 pass
             messagebox.showinfo("Ekstensi web siap",
-                "Folder ekstensi:\n" + p +
+                "Folder ekstensi (upload folder ini):\n" + p +
                 "\n\n1. Buka chrome://extensions (atau edge://extensions)\n"
                 "2. Nyalakan Developer mode\n"
                 "3. Load unpacked → pilih folder di atas\n"
                 "4. Buka Opsi ekstensi, isi Host + Token (pakai tombol Salin di jendela ini)\n"
-                "5. Claude.ai & Perplexity: isi selektor di Opsi (ChatGPT sudah bawaan)")
+                "5. Claude.ai & Perplexity: isi selektor di Opsi (ChatGPT & Gemini sudah bawaan)")
         except Exception as e:
             messagebox.showerror("Gagal menyiapkan ekstensi", str(e))
 
     def pasang_mcpb():
         try:
-            p = siapkan_mcpb()
-            tulis_log("mcpb disiapkan: " + p)
+            berkas = bangun_mcpb()
+            tulis_log("mcpb dibangun: " + berkas)
             try:
-                os.startfile(p)
+                import subprocess
+                subprocess.Popen(["explorer", "/select,", berkas])  # buka folder & sorot berkasnya
             except Exception:
-                pass
-            messagebox.showinfo("MCPB — Claude Desktop",
-                "Folder MCPB:\n" + p +
-                "\n\nDi Claude Desktop: Settings → Extensions → Advanced →\n"
-                "Extension Developer → Install Extension… → pilih berkas .mcpb,\n"
-                "lalu restart Claude Desktop. Baca README di folder ini.")
+                try:
+                    os.startfile(os.path.dirname(berkas))
+                except Exception:
+                    pass
+            messagebox.showinfo("MCPB siap-pasang — Claude Desktop",
+                "Berkas yang di-install (ini yang di-'upload'):\n" + berkas +
+                "\n\nDi Claude Desktop:\n"
+                "1. Settings (roda gigi) → Extensions → Advanced settings\n"
+                "2. Extension Developer → Install Extension…\n"
+                "3. Pilih berkas ingat.mcpb di atas\n"
+                "4. Restart Claude Desktop sekali\n\n"
+                "Setelah itu chat Claude Desktop punya tool: ingat, muat_startup, buka_bukti, catat_episode.")
         except Exception as e:
-            messagebox.showerror("Gagal menyiapkan MCPB", str(e))
+            messagebox.showerror("Gagal membangun MCPB", str(e))
 
-    ttk.Button(f4, text="Siapkan ekstensi web", command=pasang_ekstensi).pack(side="left", padx=8, pady=8)
-    ttk.Button(f4, text="Siapkan MCPB (Claude Desktop)", command=pasang_mcpb).pack(side="left", padx=8, pady=8)
+    barisf4 = ttk.Frame(f4); barisf4.pack(fill="x", padx=8, pady=(0, 8))
+    ttk.Button(barisf4, text="Siapkan ekstensi web", command=pasang_ekstensi).pack(side="left", padx=(2, 6))
+    ttk.Button(barisf4, text="Bangun ingat.mcpb (Claude Desktop)", command=pasang_mcpb).pack(side="left")
 
-    # -- sambungkan otomatis ke Claude Desktop (melengkapi MCPB, bukan menggantikannya:
-    #    di Claude Desktop 2026 jalur MCPB yang terbukti hidup)
+    # -- sambungkan otomatis ke Claude Desktop LEWAT mcpServers — LEGACY (Claude Desktop lama).
+    #    Claude Desktop 2026 mengabaikan mcpServers dan pakai MCPB (tombol di atas); bagian ini
+    #    hanya berguna untuk versi lama, ditandai jelas supaya tak menyesatkan.
     from .sambung import putuskan, sambungkan
     from .sambung import status as status_sambung
 
-    f5 = ttk.LabelFrame(win, text=" Sambungkan otomatis (isi pengaturan Claude Desktop) ")
+    f5 = ttk.LabelFrame(win, text=" Sambungkan otomatis via mcpServers — LEGACY (Claude Desktop lama) ")
     f5.pack(fill="x", padx=12, pady=(0, 12))
+    ttk.Label(f5, text="Claude Desktop 2026 memakai MCPB (di atas) — kalau ingat.mcpb sudah terpasang, abaikan bagian ini.",
+              foreground="#6b7280", font=("Segoe UI", 8)).pack(anchor="w", padx=10, pady=(6, 0))
     baris_lampu = ttk.Frame(f5)
     baris_lampu.pack(fill="x", padx=10, pady=(8, 0))
     lampu = tk.Label(baris_lampu, text="●", font=("Segoe UI", 15), fg="#6b7280")

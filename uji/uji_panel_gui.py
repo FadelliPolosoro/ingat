@@ -305,7 +305,7 @@ class JendelaKoneksi(KasusTk):
     def test_tombol_mcpb_tetap_ada(self):
         with mock.patch("ingat.sambung.status", return_value=STATUS_HIJAU):
             win, _ = self._buka(lambda w: self._lampu(w) and str(self._lampu(w)[0].cget("fg")) != "#6b7280")
-            self.assertIsNotNone(_cari_widget(win, "TButton", "Siapkan MCPB (Claude Desktop)"),
+            self.assertIsNotNone(_cari_widget(win, "TButton", "Bangun ingat.mcpb (Claude Desktop)"),
                                  "jalur MCPB tak boleh hilang — itu yang terbukti hidup di Claude Desktop 2026")
             self.assertIsNotNone(_cari_widget(win, "TButton", "Siapkan ekstensi web"))
             self.assertIsNotNone(_cari_widget(win, "TButton", "Sambungkan"))
