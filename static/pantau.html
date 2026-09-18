@@ -131,6 +131,7 @@
     <span class="status" id="status"><span class="titik" id="titik"></span><span id="statusteks">menghubungkan…</span></span>
     <span id="waktu" aria-live="polite">—</span>
     <a class="tombol" href="/graf" aria-label="Buka tampilan graf">◕ Graf</a>
+    <a class="tombol" href="/timeline" aria-label="Buka timeline">◷ Timeline</a>
     <button class="tombol" id="jeda" aria-label="Jeda pembaruan otomatis">⏸ Jeda</button>
     <button class="tombol utama" id="segar" aria-label="Segarkan sekarang">↻ Segarkan</button>
   </div>
@@ -150,6 +151,10 @@
       <h2>Prosedur menurut status</h2>
       <div class="rincian" id="r-prosedur"></div>
     </div>
+  </div>
+  <div class="panel" id="panel-tinjau" style="margin-top:16px;display:none">
+    <h2 style="color:var(--oranye)">⚠ Perlu ditinjau</h2>
+    <div class="rincian" id="r-tinjau"></div>
   </div>
 </main>
 <footer>
@@ -234,6 +239,22 @@ function render(d){
     ["ditarik","s-ditarik",m.prosedur_ditarik]];
   const maxpr = Math.max(1,...pro.map(x=>N(x[2])));
   pro.forEach(x=>rinci(rpr,x[1],x[0],N(x[2]),maxpr));
+
+  const tj = d.tinjau||{};
+  const panelTj = el("panel-tinjau");
+  const rTj = el("r-tinjau");
+  if(tj.total>0){
+    panelTj.style.display="";
+    rTj.innerHTML="";
+    (tj.daftar||[]).forEach(item=>{
+      const r=document.createElement("div"); r.className="rinci";
+      r.style.gridTemplateColumns="80px 1fr";
+      r.innerHTML=`<span class="nama" style="color:var(--oranye)">${item.jenis}</span><span style="font-size:13px">${item.teks}</span>`;
+      rTj.appendChild(r);
+    });
+  } else {
+    panelTj.style.display="none";
+  }
 
   const w = el("waktu");
   w.textContent = "diperbarui "+new Date().toLocaleTimeString("id-ID");

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>ingat · Timeline</title>
+<style>
+  :root{
+    --bg:#f5f5f7; --kaca:rgba(255,255,255,.72); --kartu:#ffffff; --kartu2:#fafafc;
+    --tinta:#1d1d1f; --tinta2:#6e6e73; --tinta3:#aeaeb2;
+    --garis:rgba(0,0,0,.08); --garis2:rgba(0,0,0,.05);
+    --biru:#0071e3; --hijau:#34c759; --oranye:#ff9f0a; --merah:#ff3b30; --teal:#5ac8fa; --abu:#8e8e93; --ungu:#af52de;
+    --bayang:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --bayang-naik:0 2px 6px rgba(0,0,0,.06),0 18px 40px rgba(0,0,0,.10);
+    --r:18px; --r2:12px; --pil:980px;
+    --lentur:cubic-bezier(.2,.8,.2,1);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Inter,Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#000; --kaca:rgba(28,28,30,.66); --kartu:#1c1c1e; --kartu2:#242426;
+      --tinta:#f5f5f7; --tinta2:#a1a1a6; --tinta3:#636366;
+      --garis:rgba(255,255,255,.10); --garis2:rgba(255,255,255,.06);
+      --biru:#0a84ff; --hijau:#30d158; --oranye:#ff9f0a; --merah:#ff453a; --teal:#64d2ff; --abu:#98989d; --ungu:#bf5af2;
+      --bayang:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.45);
+      --bayang-naik:0 2px 6px rgba(0,0,0,.5),0 18px 40px rgba(0,0,0,.6);}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tinta);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+    font:14px/1.5 var(--sans);
+    background-image:radial-gradient(60% 40% at 15% 0%,color-mix(in srgb,var(--biru) 10%,transparent),transparent 70%)}
+  :focus-visible{outline:3px solid color-mix(in srgb,var(--biru) 45%,transparent);outline-offset:2px;border-radius:var(--r2)}
+
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 20px;
+    border-bottom:1px solid var(--garis);background:var(--kaca);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);position:sticky;top:0;z-index:5}
+  .logo{width:26px;height:26px;border-radius:7px;flex:none;position:relative;
+    background:linear-gradient(135deg,var(--biru),#af52de);box-shadow:0 2px 8px color-mix(in srgb,var(--biru) 40%,transparent)}
+  .logo::after{content:"";position:absolute;inset:7.5px;border-radius:50%;background:#fff}
+  header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.02em}
+  .sisa{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .tombol{font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--tinta);text-decoration:none;
+    background:var(--kartu);border:1px solid var(--garis);border-radius:var(--pil);padding:7px 14px;
+    display:inline-flex;align-items:center;gap:6px;box-shadow:var(--bayang);
+    transition:transform .14s var(--lentur),box-shadow .18s,background .18s,border-color .18s}
+  .tombol:hover{box-shadow:var(--bayang-naik);transform:translateY(-1px);border-color:color-mix(in srgb,var(--biru) 40%,var(--garis))}
+  .tombol:active{transform:scale(.955);box-shadow:none}
+
+  main{max-width:860px;margin:0 auto;padding:26px 20px 60px}
+
+  .statistik{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:28px}
+  .stat{background:var(--kartu);border:1px solid var(--garis2);border-radius:var(--r);padding:16px 20px;
+    box-shadow:var(--bayang);flex:1;min-width:140px;animation:naik .45s var(--lentur) both}
+  .stat .angka{font-size:28px;font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .stat .judul{color:var(--tinta2);font-size:12px;margin-top:4px;font-weight:600}
+  @keyframes naik{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center}
+  .filter-bar select,.filter-bar input{font:inherit;font-size:13px;padding:8px 14px;border-radius:var(--r2);
+    border:1px solid var(--garis);background:var(--kartu);color:var(--tinta);box-shadow:var(--bayang);
+    transition:border-color .18s}
+  .filter-bar select:focus,.filter-bar input:focus{border-color:var(--biru);outline:none}
+  .filter-bar input{flex:1;min-width:160px}
+
+  .hari-grup{margin-bottom:28px;animation:naik .5s var(--lentur) both}
+  .hari-header{font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--tinta);
+    padding:0 0 8px;border-bottom:2px solid var(--garis);margin-bottom:0;position:relative}
+
+  .timeline{position:relative;padding-left:28px}
+  .timeline::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;
+    background:var(--garis);border-radius:1px}
+
+  .episode{position:relative;padding:12px 16px;margin:10px 0;background:var(--kartu);border:1px solid var(--garis2);
+    border-radius:var(--r2);box-shadow:var(--bayang);cursor:default;
+    transition:transform .18s var(--lentur),box-shadow .2s}
+  .episode:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik)}
+  .episode:active{transform:scale(.965)}
+  .episode::before{content:"";position:absolute;left:-24px;top:18px;width:10px;height:10px;
+    border-radius:50%;background:var(--biru);border:2px solid var(--bg);z-index:1}
+
+  .episode .jam{font-size:12px;font-weight:600;color:var(--tinta2);font-variant-numeric:tabular-nums;margin-bottom:2px}
+  .episode .teks-utama{font-size:13.5px;font-weight:600;line-height:1.4;color:var(--tinta)}
+  .episode .ringkas-sub{font-size:12.5px;color:var(--tinta2);line-height:1.4;margin-top:2px}
+  .episode .badge-baris{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+  .badge-sm{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:var(--pil);white-space:nowrap}
+  .badge-sumber{color:#fff}
+  .badge-tier{color:var(--tinta2);background:color-mix(in srgb,var(--tinta) 8%,transparent)}
+
+  .kosong{text-align:center;padding:48px 20px;color:var(--tinta2);font-size:14px}
+
+  footer{max-width:860px;margin:0 auto;padding:12px 20px 34px;color:var(--tinta3);font-size:12px}
+
+  @media(max-width:600px){
+    .statistik{flex-direction:column}
+    .timeline{padding-left:22px}
+    .timeline::before{left:6px}
+    .episode::before{left:-20px;width:8px;height:8px}
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true"></div>
+  <h1>ingat · Timeline</h1>
+  <div class="sisa">
+    <a class="tombol" href="/" aria-label="Kembali ke Monitor">◉ Monitor</a>
+    <a class="tombol" href="/graf" aria-label="Buka tampilan graf">◕ Graf</a>
+  </div>
+</header>
+<main>
+  <div class="statistik" id="statistik"></div>
+  <div class="filter-bar">
+    <select id="filter-sumber" aria-label="Filter sumber"><option value="">Semua sumber</option></select>
+    <input id="filter-cari" type="search" placeholder="Cari episode..." aria-label="Cari episode">
+  </div>
+  <div id="isi"></div>
+</main>
+<footer>ingat · timeline kronologis · data dari <code>/timeline/data</code></footer>
+<script>
+"use strict";
+const SUMBER_MAP = {
+  "mcp":                        {nama:"Claude Desktop", warna:"var(--biru)"},
+  "browser:claude.ai":          {nama:"Claude.ai",      warna:"var(--biru)"},
+  "browser:chatgpt.com":        {nama:"ChatGPT",        warna:"var(--hijau)"},
+  "browser:chat.openai.com":    {nama:"ChatGPT",        warna:"var(--hijau)"},
+  "browser:gemini.google.com":  {nama:"Gemini",         warna:"var(--oranye)"},
+  "browser:www.perplexity.ai":  {nama:"Perplexity",     warna:"var(--ungu)"},
+  "panel":                      {nama:"Panel",          warna:"var(--abu)"},
+  "claude-code":                {nama:"Claude Code",    warna:"var(--teal)"},
+  "claude-code-histori":        {nama:"Claude Code",    warna:"var(--teal)"},
+};
+function infoSumber(s){
+  if(!s) return {nama:"—", warna:"var(--abu)"};
+  return SUMBER_MAP[s] || {nama:s, warna:"var(--abu)"};
+}
+
+const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function formatTanggal(tgl){
+  const p = tgl.split("-");
+  if(p.length!==3) return tgl;
+  return parseInt(p[2],10)+" "+BULAN[parseInt(p[1],10)-1]+" "+p[0];
+}
+function formatJam(waktu){
+  if(!waktu||waktu.length<16) return "";
+  return waktu.substring(11,16);
+}
+
+let DATA = null;
+let sumberSet = new Set();
+
+function render(){
+  const wadah = document.getElementById("isi");
+  const filterSumber = document.getElementById("filter-sumber").value;
+  const filterCari = document.getElementById("filter-cari").value.toLowerCase().trim();
+  wadah.innerHTML = "";
+  if(!DATA||!DATA.hari||DATA.hari.length===0){
+    wadah.innerHTML='<div class="kosong">Belum ada episode.</div>';
+    return;
+  }
+  let totalTampil = 0;
+  DATA.hari.forEach(function(h){
+    const filtered = h.episode.filter(function(ep){
+      if(filterSumber && ep.sumber !== filterSumber) return false;
+      if(filterCari){
+        const teks = ((ep.judul||"")+" "+(ep.ringkas||"")+" "+(ep.sumber||"")).toLowerCase();
+        if(teks.indexOf(filterCari)===-1) return false;
+      }
+      return true;
+    });
+    if(filtered.length===0) return;
+    totalTampil += filtered.length;
+    const grup = document.createElement("div");
+    grup.className = "hari-grup";
+    grup.innerHTML = '<div class="hari-header">'+formatTanggal(h.tanggal)+'</div>';
+    const tl = document.createElement("div");
+    tl.className = "timeline";
+    filtered.forEach(function(ep){
+      const info = infoSumber(ep.sumber);
+      const judul = ep.judul || ep.ringkas || "(tanpa judul)";
+      const sub = ep.judul && ep.ringkas && ep.ringkas !== ep.judul ? ep.ringkas : "";
+      const card = document.createElement("div");
+      card.className = "episode";
+      card.innerHTML =
+        '<div class="jam">'+formatJam(ep.waktu)+'</div>'+
+        '<div class="teks-utama">'+esc(judul)+'</div>'+
+        (sub?'<div class="ringkas-sub">'+esc(sub)+'</div>':'')+
+        '<div class="badge-baris">'+
+          '<span class="badge-sm badge-sumber" style="background:'+info.warna+'">'+esc(info.nama)+'</span>'+
+          (ep.tier?'<span class="badge-sm badge-tier">'+esc(ep.tier)+'</span>':'')+
+        '</div>';
+      tl.appendChild(card);
+    });
+    grup.appendChild(tl);
+    wadah.appendChild(grup);
+  });
+  if(totalTampil===0){
+    wadah.innerHTML='<div class="kosong">Tidak ada episode yang cocok dengan filter.</div>';
+  }
+}
+
+function esc(s){
+  const d=document.createElement("span");d.textContent=s;return d.innerHTML;
+}
+
+function isiStatistik(){
+  const el = document.getElementById("statistik");
+  if(!DATA||!DATA.hari||DATA.hari.length===0){el.innerHTML="";return;}
+  let total=0;
+  DATA.hari.forEach(function(h){total+=h.episode.length;});
+  const pertama = DATA.hari[DATA.hari.length-1].tanggal;
+  const terakhir = DATA.hari[0].tanggal;
+  el.innerHTML =
+    '<div class="stat"><div class="angka">'+total+'</div><div class="judul">Total episode</div></div>'+
+    '<div class="stat"><div class="angka">'+DATA.hari.length+'</div><div class="judul">Hari tercatat</div></div>'+
+    '<div class="stat" style="flex:2"><div class="angka" style="font-size:18px">'+formatTanggal(pertama)+' — '+formatTanggal(terakhir)+'</div><div class="judul">Rentang waktu</div></div>';
+}
+
+function isiFilterSumber(){
+  const sel = document.getElementById("filter-sumber");
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Semua sumber</option>';
+  Array.from(sumberSet).sort().forEach(function(s){
+    const info = infoSumber(s);
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = info.nama;
+    sel.appendChild(opt);
+  });
+  sel.value = cur;
+}
+
+async function tarik(){
+  try{
+    const r = await fetch("/timeline/data",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    DATA = await r.json();
+    sumberSet.clear();
+    (DATA.hari||[]).forEach(function(h){
+      h.episode.forEach(function(ep){if(ep.sumber) sumberSet.add(ep.sumber);});
+    });
+    isiFilterSumber();
+    isiStatistik();
+    render();
+  }catch(err){
+    document.getElementById("isi").innerHTML=
+      '<div class="kosong">Gagal memuat data: '+esc(err.message)+'. Pastikan <code>ingat pantau</code> berjalan.</div>';
+  }
+}
+
+document.getElementById("filter-sumber").addEventListener("change", render);
+document.getElementById("filter-cari").addEventListener("input", render);
+tarik();
+</script>
+</body>
+</html>

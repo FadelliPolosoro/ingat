@@ -23,6 +23,7 @@ _GRAF = os.path.join(_STATIK, "graf.html")
 
 def snapshot(app: Aplikasi) -> dict:
     """Ringkasan yang dikirim ke halaman. Hanya metrik agregat + konteks non-rahasia."""
+    from .panel import hitungan_tinjau
     e = app.konfig.get("embedding", {}) or {}
     return {
         "versi": __version__,
@@ -30,6 +31,7 @@ def snapshot(app: Aplikasi) -> dict:
         "embedding": {"jenis": e.get("jenis"), "model": e.get("model"), "dim": e.get("dim")},
         "dir_data": app.konfig.get("dir_data"),
         "metrik": app.store.ringkasan_metrik(),
+        "tinjau": hitungan_tinjau(app.store),
     }
 
 
@@ -49,6 +51,35 @@ def graf(app: Aplikasi) -> dict:
             if b in id_ep:
                 g["edges"].append({"a": p.id, "b": b, "jenis": "bukti"})
     return g
+
+
+def hitungan_tinjau_snapshot(app: Aplikasi) -> dict:
+    """Ringkasan item yang perlu ditinjau — untuk halaman monitor."""
+    from .panel import hitungan_tinjau
+    return hitungan_tinjau(app.store)
+
+
+def timeline_data(app: Aplikasi) -> dict:
+    """Episode dikelompokkan per hari, terbaru dulu. Maks 200 episode terbaru."""
+    from . import judul_memori as JM
+    episodes = list(reversed(app.store.episode_semua()))[:200]
+    judul_map = JM.semua_judul(app.store)
+    hari: dict[str, list] = {}
+    for ep in episodes:
+        tanggal = (getattr(ep, "waktu", "") or "")[:10]
+        if not tanggal:
+            continue
+        item = {
+            "id": ep.id,
+            "waktu": getattr(ep, "waktu", ""),
+            "judul": judul_map.get(ep.id, ""),
+            "ringkas": (getattr(ep, "ringkas", "") or "")[:120],
+            "sumber": getattr(ep, "sumber", ""),
+            "tier": getattr(ep, "tier", ""),
+            "jenis": getattr(ep, "jenis_kejadian", ""),
+        }
+        hari.setdefault(tanggal, []).append(item)
+    return {"hari": [{"tanggal": k, "episode": v} for k, v in hari.items()]}
 
 
 def _buat_handler(app: Aplikasi):
@@ -75,11 +106,19 @@ def _buat_handler(app: Aplikasi):
             if self.path == "/data":
                 isi = json.dumps(snapshot(app), ensure_ascii=False).encode("utf-8")
                 return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path == "/tinjau":
+                isi = json.dumps(hitungan_tinjau_snapshot(app), ensure_ascii=False).encode("utf-8")
+                return self._kirim(200, "application/json; charset=utf-8", isi)
             if self.path == "/graf/data":
                 isi = json.dumps(graf(app), ensure_ascii=False).encode("utf-8")
                 return self._kirim(200, "application/json; charset=utf-8", isi)
             if self.path in ("/graf", "/graf/"):
                 return self._html(_GRAF, "graf.html")
+            if self.path == "/timeline/data":
+                isi = json.dumps(timeline_data(app), ensure_ascii=False).encode("utf-8")
+                return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path in ("/timeline", "/timeline/"):
+                return self._html(os.path.join(_STATIK, "timeline.html"), "timeline.html")
             if self.path in ("/", "/pantau", "/pantau/"):
                 return self._html(_HTML, "pantau.html")
             return self._kirim(404, "application/json; charset=utf-8", b'{"galat": "tidak ada"}')

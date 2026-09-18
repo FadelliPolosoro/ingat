@@ -205,6 +205,19 @@ def _kesehatan_koneksi(iso) -> tuple[str, str]:
     return "●", "kuning"
 
 
+def hitungan_tinjau(store) -> dict:
+    """Hitung item yang butuh tinjauan (tinjau_ulang=True). Untuk badge panel + monitor."""
+    pelajaran = [p for p in store.pelajaran_semua() if getattr(p, "tinjau_ulang", False)]
+    prosedur = [p for p in store.prosedur_semua() if getattr(p, "tinjau_ulang", False)]
+    return {
+        "pelajaran": len(pelajaran),
+        "prosedur": len(prosedur),
+        "total": len(pelajaran) + len(prosedur),
+        "daftar": [{"jenis": "pelajaran", "id": p.id, "teks": p.pelajaran[:80]} for p in pelajaran]
+                + [{"jenis": "prosedur", "id": p.id, "teks": p.prosedur[:80]} for p in prosedur],
+    }
+
+
 def _basis_sumberdaya() -> str:
     """Root berkas pendukung: _MEIPASS di dalam .exe, atau root repo saat dari source."""
     return getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1243,7 +1256,24 @@ def jalankan(konfig: str | None = None) -> int:
     lbl_status = ttk.Label(stat, text="menghubungkan…", font=("Segoe UI", 10))
     lbl_status.pack(anchor="w", padx=10, pady=(6, 2))
     lbl_status2 = ttk.Label(stat, text="", foreground="#6b7280", font=("Segoe UI", 9))
-    lbl_status2.pack(anchor="w", padx=10, pady=(0, 8))
+    lbl_status2.pack(anchor="w", padx=10, pady=(0, 2))
+
+    lbl_tinjau = ttk.Label(stat, text="", foreground="#b45309", font=("Segoe UI", 9), cursor="hand2")
+    lbl_tinjau.pack(anchor="w", padx=10, pady=(0, 6))
+    lbl_tinjau.bind("<Button-1>", lambda _: bangun_jendela_memori(root, app, tulis_log))
+
+    def perbarui_tinjau():
+        try:
+            h = hitungan_tinjau(app.store)
+            if h["total"] > 0:
+                lbl_tinjau.config(text=f"⚠ {h['total']} memori perlu ditinjau ({h['pelajaran']} pelajaran, {h['prosedur']} prosedur)")
+            else:
+                lbl_tinjau.config(text="")
+        except Exception:
+            pass
+        root.after(300_000, perbarui_tinjau)
+
+    root.after(2000, perbarui_tinjau)
 
     # -- log
     def tulis_log(teks: str):
@@ -1348,6 +1378,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Jawab", lambda: jalankan_aksi("jawab", aksi_jawab)),
         ("Monitor", lambda: buka("http://127.0.0.1:8790/", "monitor")),
         ("Graf", lambda: buka("http://127.0.0.1:8790/graf", "graf")),
+        ("Timeline", lambda: buka("http://127.0.0.1:8790/timeline", "timeline")),
         ("Buka catatan", lambda: jalankan_aksi("catatan", aksi_catatan)),
         ("Koneksi AI", buka_koneksi),
         ("Rapikan nama", buka_judul),
