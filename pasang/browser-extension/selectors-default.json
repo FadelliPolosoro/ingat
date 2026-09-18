@@ -27,22 +27,22 @@
     "compose": "rich-textarea .ql-editor"
   },
   "chat.deepseek.com": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": ".ds-message:not(:has(.ds-markdown)) || [data-role=\"user\"]",
+    "assistant": ".ds-message:has(.ds-markdown) || [data-role=\"assistant\"]",
+    "verifikasi": "riset Sep 2026 dari inkpour PR#14, NIyueeE/deepseek-user-message-renderer, sameerasw/my-internet; .ds-message stabil, :has() luas didukung; kelas hash (fbb737a4 dll) TIDAK dipakai karena berubah tiap deploy. BELUM diverifikasi live (butuh login).",
+    "compose": "textarea[name=\"search\"] || textarea || [contenteditable=\"true\"]"
   },
   "www.kimi.com": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": ".segment-container:not(:has(.segment-assistant-actions)) || [data-role=\"user\"]",
+    "assistant": ".segment-container:has(.segment-assistant-actions) || [data-role=\"assistant\"]",
+    "verifikasi": "riset Sep 2026 dari Greasyfork 543124 (Kimi TTS), 542619 (Kimi CSS), 542616 (Prompt Injector); .segment-container/.segment-assistant-actions stabil. BELUM diverifikasi live.",
+    "compose": ".chat-input-editor || [contenteditable=\"true\"][role=\"textbox\"] || [contenteditable=\"true\"]"
   },
   "kimi.moonshot.cn": {
-    "user": "",
-    "assistant": "",
-    "verifikasi": "belum diisi — pakai Pilih elemen",
-    "compose": ""
+    "user": ".segment-container:not(:has(.segment-assistant-actions)) || [data-role=\"user\"]",
+    "assistant": ".segment-container:has(.segment-assistant-actions) || [data-role=\"assistant\"]",
+    "verifikasi": "sama dengan www.kimi.com (domain lama); BELUM diverifikasi live.",
+    "compose": ".chat-input-editor || [contenteditable=\"true\"][role=\"textbox\"] || [contenteditable=\"true\"]"
   },
   "www.perplexity.ai": {
     "user": "[dir=\"auto\"] .whitespace-pre-line || [data-testid=\"query-title\"]",
