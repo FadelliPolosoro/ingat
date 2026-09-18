@@ -980,9 +980,17 @@ def jalankan(konfig: str | None = None) -> int:
                 pel=sum(m.get(k, 0) for k in m if k.startswith("pelajaran_")),
                 pro=sum(m.get(k, 0) for k in m if k.startswith("prosedur_")),
                 sehat=sehat))
-            lbl_status2.config(text="mode {m} · {j}:{mo} · server 8765/8790 · {t}".format(
+            try:
+                from .kesehatan import ringkasan as _ring_kes
+                kes = _ring_kes()
+                lampu_kes = kes.get("lampu", "hijau")
+                ikon_kes = {"hijau": "✓", "kuning": "⚠", "merah": "✗"}.get(lampu_kes, "?")
+                teks_kes = f" · kesehatan {ikon_kes}"
+            except Exception:
+                teks_kes = ""
+            lbl_status2.config(text="mode {m} · {j}:{mo} · server 8765/8790 · {t}{kes}".format(
                 m=mode, j=e.get("jenis", "?"), mo=e.get("model", "?"),
-                t=dt.datetime.now().strftime("%H:%M:%S")))
+                t=dt.datetime.now().strftime("%H:%M:%S"), kes=teks_kes))
         except Exception as ex:
             lbl_status.config(text="status gagal: " + str(ex))
         # Centang nyala-otomatis ikut disegarkan: pintasan bisa dihapus dari File Explorer

@@ -71,6 +71,11 @@ def utama(argv: list[str] | None = None) -> int:
     ic.add_argument("--dir", default=None, help="folder transkrip (default: ~/.claude/projects)")
     ic.add_argument("--lingkup", default=None, help="paksa lingkup untuk semua (mis. peran:asisten-ai); default: per-proyek dari cwd transkrip")
     ic.add_argument("--tulis", action="store_true", help="benar-benar tulis (default: kering — cetak rencana saja)")
+    ie = sub.add_parser("impor-ekspor", help="impor dari file ekspor resmi Claude.ai / ChatGPT (Jalur A, ZIP atau JSON)")
+    ie.add_argument("berkas", help="path ke file ZIP atau conversations.json")
+    ie.add_argument("--lingkup", default=None, help="paksa lingkup")
+    ie.add_argument("--tulis", action="store_true", help="benar-benar tulis (default: kering)")
+    sub.add_parser("kesehatan", help="ringkasan kesehatan koneksi situs AI")
     c = sub.add_parser("catat", help="catat episode dari CLI")
     c.add_argument("--isi", required=True)
     c.add_argument("--ringkas", required=True)
@@ -293,6 +298,12 @@ def utama(argv: list[str] | None = None) -> int:
     elif a.perintah == "impor-claude":
         from .impor_claude import impor_histori
         print(json.dumps(impor_histori(app, root=a.dir, tulis=a.tulis, lingkup_paksa=a.lingkup), ensure_ascii=False, indent=2))
+    elif a.perintah == "impor-ekspor":
+        from .impor_ekspor import impor_ekspor as _impor_ekspor
+        print(json.dumps(_impor_ekspor(app, a.berkas, tulis=a.tulis, lingkup_paksa=a.lingkup), ensure_ascii=False, indent=2))
+    elif a.perintah == "kesehatan":
+        from .kesehatan import ringkasan as _ringkasan_kesehatan
+        print(json.dumps(_ringkasan_kesehatan(), ensure_ascii=False, indent=2))
     elif a.perintah == "catat":
         ep = app.store.tambah_episode(a.isi, sumber=a.sumber, tier=a.tier, lingkup=a.lingkup, jenis_kejadian=a.jenis,
                                       ringkas=a.ringkas, instrumen=a.instrumen)

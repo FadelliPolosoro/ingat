@@ -300,7 +300,12 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                     metrik = app.store.ringkasan_metrik()
                     if penjaga:
                         metrik["keamanan"] = penjaga.statistik()
+                    from .kesehatan import ringkasan as _ringkasan_kesehatan
+                    metrik["kesehatan"] = _ringkasan_kesehatan()
                     return self._kirim(200, metrik)
+                if path == "/kesehatan":
+                    from .kesehatan import ringkasan as _ringkasan_kesehatan
+                    return self._kirim(200, _ringkasan_kesehatan())
                 if path == "/penyedia":
                     return self._kirim(200, {"aktif": sorted(app.penyedia), "gate": app.gate.izin_tier, "preset": daftar_preset()})
                 if path.startswith("/bukti/"):
@@ -414,6 +419,13 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                     # hook dipindah ke mode jauh.
                     app.store.catat_metrik(str(b.get("nama", "")), float(b.get("nilai", 1)), **(b.get("konteks") or {}))
                     return self._kirim(200, {"ok": True})
+                if path == "/kesehatan":
+                    from .kesehatan import catat_respons as _catat_respons, catat_adapter_rusak as _catat_adapter_rusak
+                    if "adapter_rusak" in b:
+                        _catat_adapter_rusak(str(b.get("situs", "")), str(b.get("pesan", "")))
+                        return self._kirim(200, {"ok": True})
+                    r = _catat_respons(str(b.get("situs", "")), int(b.get("kode", 200)), str(b.get("pesan", "")))
+                    return self._kirim(200, r)
                 if path == "/ingat":
                     return self._kirim(200, app.gateway.ingat(sesi=sesi, **{k: b[k] for k in ("query", "lingkup", "jenis", "tanggal_peristiwa", "tugas", "lingkungan", "anggaran_token") if k in b}))
                 if path == "/startup":
