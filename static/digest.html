@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>ingat · Digest</title>
+<style>
+  :root{
+    --bg:#f5f5f7; --kaca:rgba(255,255,255,.72); --kartu:#ffffff; --kartu2:#fafafc;
+    --tinta:#1d1d1f; --tinta2:#6e6e73; --tinta3:#aeaeb2;
+    --garis:rgba(0,0,0,.08); --garis2:rgba(0,0,0,.05);
+    --biru:#0071e3; --hijau:#34c759; --oranye:#ff9f0a; --merah:#ff3b30; --teal:#5ac8fa; --abu:#8e8e93; --ungu:#af52de;
+    --bayang:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --bayang-naik:0 2px 6px rgba(0,0,0,.06),0 18px 40px rgba(0,0,0,.10);
+    --r:18px; --r2:12px; --pil:980px;
+    --lentur:cubic-bezier(.2,.8,.2,1);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Inter,Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#000; --kaca:rgba(28,28,30,.66); --kartu:#1c1c1e; --kartu2:#242426;
+      --tinta:#f5f5f7; --tinta2:#a1a1a6; --tinta3:#636366;
+      --garis:rgba(255,255,255,.10); --garis2:rgba(255,255,255,.06);
+      --biru:#0a84ff; --hijau:#30d158; --oranye:#ff9f0a; --merah:#ff453a; --teal:#64d2ff; --abu:#98989d; --ungu:#bf5af2;
+      --bayang:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.45);
+      --bayang-naik:0 2px 6px rgba(0,0,0,.5),0 18px 40px rgba(0,0,0,.6);}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tinta);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+    font:14px/1.5 var(--sans);
+    background-image:radial-gradient(60% 40% at 15% 0%,color-mix(in srgb,var(--biru) 10%,transparent),transparent 70%)}
+  :focus-visible{outline:3px solid color-mix(in srgb,var(--biru) 45%,transparent);outline-offset:2px;border-radius:var(--r2)}
+
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 20px;
+    border-bottom:1px solid var(--garis);background:var(--kaca);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);position:sticky;top:0;z-index:5}
+  .logo{width:26px;height:26px;border-radius:7px;flex:none;position:relative;
+    background:linear-gradient(135deg,var(--biru),#af52de);box-shadow:0 2px 8px color-mix(in srgb,var(--biru) 40%,transparent)}
+  .logo::after{content:"";position:absolute;inset:7.5px;border-radius:50%;background:#fff}
+  header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.02em}
+  .sisa{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .tombol{font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--tinta);text-decoration:none;
+    background:var(--kartu);border:1px solid var(--garis);border-radius:var(--pil);padding:7px 14px;
+    display:inline-flex;align-items:center;gap:6px;box-shadow:var(--bayang);
+    transition:transform .14s var(--lentur),box-shadow .18s,background .18s,border-color .18s}
+  .tombol:hover{box-shadow:var(--bayang-naik);transform:translateY(-1px);border-color:color-mix(in srgb,var(--biru) 40%,var(--garis))}
+  .tombol:active{transform:scale(.955);box-shadow:none}
+
+  main{max-width:860px;margin:0 auto;padding:26px 20px 60px}
+
+  .filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center}
+  .filter-bar select{font:inherit;font-size:13px;padding:8px 14px;border-radius:var(--r2);
+    border:1px solid var(--garis);background:var(--kartu);color:var(--tinta);box-shadow:var(--bayang);
+    transition:border-color .18s}
+  .filter-bar select:focus{border-color:var(--biru);outline:none}
+
+  @keyframes naik{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .hari-kartu{background:var(--kartu);border:1px solid var(--garis2);border-radius:var(--r);
+    box-shadow:var(--bayang);margin-bottom:20px;overflow:hidden;animation:naik .45s var(--lentur) both;
+    transition:transform .18s var(--lentur),box-shadow .2s}
+  .hari-kartu:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik)}
+  .hari-kartu:active{transform:scale(.965)}
+  .hari-kartu.kosong{opacity:.5}
+
+  .hari-header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px;
+    border-bottom:1px solid var(--garis2)}
+  .hari-header h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.02em}
+  .badge-total{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:var(--pil);
+    background:color-mix(in srgb,var(--biru) 12%,transparent);color:var(--biru)}
+
+  .hari-body{padding:16px 20px}
+  .ringkasan{font-size:13.5px;color:var(--tinta2);line-height:1.5;margin-bottom:14px}
+
+  .platform-bars{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .platform-row{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .platform-nama{width:100px;text-align:right;font-weight:600;color:var(--tinta2);flex:none}
+  .platform-bar-track{flex:1;height:8px;border-radius:999px;background:color-mix(in srgb,var(--tinta) 8%,transparent);overflow:hidden}
+  .platform-bar-fill{height:100%;border-radius:999px;transition:width .7s var(--lentur)}
+  .platform-jumlah{width:28px;font-weight:700;font-variant-numeric:tabular-nums;font-size:12px}
+
+  .butir-list{display:flex;flex-direction:column;gap:0}
+  .butir{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-top:1px solid var(--garis2)}
+  .butir:first-child{border-top:none}
+  .butir-jam{font-size:12px;font-weight:600;color:var(--tinta3);font-variant-numeric:tabular-nums;
+    width:40px;flex:none;padding-top:1px}
+  .butir-isi{flex:1;min-width:0}
+  .butir-judul{font-size:13px;font-weight:600;line-height:1.4;color:var(--tinta)}
+  .butir-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .badge-sm{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:var(--pil);white-space:nowrap}
+  .badge-platform{color:#fff}
+  .badge-tier{color:var(--tinta2);background:color-mix(in srgb,var(--tinta) 8%,transparent)}
+  .badge-jenis{font-weight:500}
+  .badge-jenis.sukses{color:var(--hijau);background:color-mix(in srgb,var(--hijau) 12%,transparent)}
+  .badge-jenis.gagal{color:var(--merah);background:color-mix(in srgb,var(--merah) 12%,transparent)}
+  .badge-jenis.koreksi{color:var(--oranye);background:color-mix(in srgb,var(--oranye) 12%,transparent)}
+  .badge-jenis.pola{color:var(--ungu);background:color-mix(in srgb,var(--ungu) 12%,transparent)}
+  .badge-jenis.kegagalan{color:var(--merah);background:color-mix(in srgb,var(--merah) 12%,transparent)}
+
+  .kosong-teks{text-align:center;padding:20px;color:var(--tinta3);font-size:13px}
+  .muat{text-align:center;padding:48px 20px;color:var(--tinta2);font-size:14px}
+
+  footer{max-width:860px;margin:0 auto;padding:12px 20px 34px;color:var(--tinta3);font-size:12px}
+
+  @media(max-width:600px){
+    .platform-nama{width:72px;font-size:11.5px}
+    .butir{gap:8px}
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true"></div>
+  <h1>ingat · Digest</h1>
+  <div class="sisa">
+    <a class="tombol" href="/" aria-label="Kembali ke Monitor">&#9673; Monitor</a>
+    <a class="tombol" href="/timeline" aria-label="Buka timeline">&#9719; Timeline</a>
+    <a class="tombol" href="/graf" aria-label="Buka tampilan graf">&#9685; Graf</a>
+  </div>
+</header>
+<main>
+  <div class="filter-bar">
+    <select id="rentang" aria-label="Rentang waktu">
+      <option value="7">7 hari terakhir</option>
+      <option value="14">14 hari terakhir</option>
+      <option value="30">30 hari terakhir</option>
+    </select>
+  </div>
+  <div id="isi"><div class="muat">Memuat digest...</div></div>
+</main>
+<footer>ingat · digest harian · data dari <code>/digest/data</code></footer>
+<script>
+"use strict";
+var WARNA_PLATFORM = {
+  "Claude Desktop":"var(--biru)", "Claude.ai":"var(--biru)",
+  "ChatGPT":"var(--hijau)",
+  "Gemini":"var(--oranye)",
+  "Perplexity":"var(--ungu)",
+  "Claude Code":"var(--teal)",
+  "Panel":"var(--abu)"
+};
+function warnaPlatform(n){ return WARNA_PLATFORM[n] || "var(--abu)"; }
+
+var BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function formatTanggal(tgl){
+  var p = tgl.split("-");
+  if(p.length!==3) return tgl;
+  return parseInt(p[2],10)+" "+BULAN[parseInt(p[1],10)-1]+" "+p[0];
+}
+
+function esc(s){
+  var d=document.createElement("span"); d.textContent=s; return d.innerHTML;
+}
+
+function renderHari(d){
+  var kartu = document.createElement("div");
+  kartu.className = "hari-kartu" + (d.total===0?" kosong":"");
+
+  var hdr = document.createElement("div");
+  hdr.className = "hari-header";
+  hdr.innerHTML = '<h2>'+esc(formatTanggal(d.tanggal))+'</h2>'+
+    '<span class="badge-total">'+d.total+' episode</span>';
+  kartu.appendChild(hdr);
+
+  var body = document.createElement("div");
+  body.className = "hari-body";
+
+  if(d.total===0){
+    body.innerHTML = '<div class="kosong-teks">Tidak ada episode</div>';
+    kartu.appendChild(body);
+    return kartu;
+  }
+
+  body.innerHTML = '<div class="ringkasan">'+esc(d.ringkasan)+'</div>';
+
+  // bar platform
+  var plat = d.platform || {};
+  var keys = Object.keys(plat);
+  if(keys.length>0){
+    var maks = 0;
+    keys.forEach(function(k){ if(plat[k]>maks) maks=plat[k]; });
+    var bars = document.createElement("div");
+    bars.className = "platform-bars";
+    keys.forEach(function(k){
+      var pct = maks>0? Math.round(plat[k]/maks*100) : 0;
+      var row = document.createElement("div");
+      row.className = "platform-row";
+      row.innerHTML =
+        '<span class="platform-nama">'+esc(k)+'</span>'+
+        '<span class="platform-bar-track"><span class="platform-bar-fill" style="width:0%;background:'+warnaPlatform(k)+'"></span></span>'+
+        '<span class="platform-jumlah">'+plat[k]+'</span>';
+      bars.appendChild(row);
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          row.querySelector(".platform-bar-fill").style.width = pct+"%";
+        });
+      });
+    });
+    body.appendChild(bars);
+  }
+
+  // daftar butir
+  var butir = d.butir || [];
+  if(butir.length>0){
+    var list = document.createElement("div");
+    list.className = "butir-list";
+    butir.forEach(function(b){
+      var el = document.createElement("div");
+      el.className = "butir";
+      var jenisKls = (b.jenis||"").toLowerCase();
+      el.innerHTML =
+        '<span class="butir-jam">'+esc(b.waktu||"")+'</span>'+
+        '<div class="butir-isi">'+
+          '<div class="butir-judul">'+esc(b.judul||"")+'</div>'+
+          '<div class="butir-badges">'+
+            '<span class="badge-sm badge-platform" style="background:'+warnaPlatform(b.platform)+'">'+esc(b.platform||"")+'</span>'+
+            (b.tier? '<span class="badge-sm badge-tier">'+esc(b.tier)+'</span>' : '')+
+            (b.jenis? '<span class="badge-sm badge-jenis '+jenisKls+'">'+esc(b.jenis)+'</span>' : '')+
+          '</div>'+
+        '</div>';
+      list.appendChild(el);
+    });
+    body.appendChild(list);
+  }
+
+  kartu.appendChild(body);
+  return kartu;
+}
+
+function hitungRentang(hari){
+  var d = new Date();
+  d.setDate(d.getDate() - (hari - 1));
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,"0");
+  var dd = String(d.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+dd;
+}
+
+async function tarik(){
+  var wadah = document.getElementById("isi");
+  wadah.innerHTML = '<div class="muat">Memuat digest...</div>';
+  var rentang = parseInt(document.getElementById("rentang").value, 10);
+  var url = "/digest/data";
+  if(rentang !== 7){
+    var dari = hitungRentang(rentang);
+    var sampai = new Date().toISOString().slice(0,10);
+    url = "/digest/data/" + dari + "?sampai=" + sampai;
+  }
+  try{
+    var r = await fetch(url, {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    var data = await r.json();
+    wadah.innerHTML = "";
+    if(!Array.isArray(data)){
+      data = [data];
+    }
+    if(data.length===0){
+      wadah.innerHTML = '<div class="muat">Tidak ada episode dalam rentang ini.</div>';
+      return;
+    }
+    data.slice().reverse().forEach(function(d){
+      wadah.appendChild(renderHari(d));
+    });
+  }catch(err){
+    wadah.innerHTML = '<div class="muat">Gagal memuat: '+esc(err.message)+'. Pastikan <code>ingat pantau</code> berjalan.</div>';
+  }
+}
+
+document.getElementById("rentang").addEventListener("change", tarik);
+tarik();
+</script>
+</body>
+</html>

@@ -790,6 +790,7 @@ def bangun_jendela_memori(root, app, tulis_log=None):
     from tkinter import filedialog, messagebox, ttk
     from . import judul_memori as JM
     from . import pindah
+    from . import tag as TAG
     if tulis_log is None:
         tulis_log = lambda *_: None  # noqa: E731
 
@@ -804,18 +805,22 @@ def bangun_jendela_memori(root, app, tulis_log=None):
     ttk.Label(atas, text="Cari:").pack(side="left")
     cari_var = tk.StringVar()
     ttk.Entry(atas, textvariable=cari_var).pack(side="left", fill="x", expand=True, padx=(6, 8), ipady=2)
+    tag_filter_var = tk.StringVar(value="Semua tag")
+    cmb_tag = ttk.Combobox(atas, textvariable=tag_filter_var, state="readonly", width=16)
+    cmb_tag.pack(side="left", padx=(6, 0))
     lbl_jml = ttk.Label(atas, text="", foreground="#6b7280", font=("Segoe UI", 9))
-    lbl_jml.pack(side="left")
+    lbl_jml.pack(side="left", padx=(6, 0))
 
     # -- badan: kiri daftar, kanan detail
     badan = ttk.Panedwindow(win, orient="horizontal"); badan.pack(fill="both", expand=True, padx=12, pady=4)
     kiri = ttk.Frame(badan); badan.add(kiri, weight=3)
-    kolom = ("sumber", "tanggal", "tier")
+    kolom = ("sumber", "tanggal", "tier", "tag")
     tabel = ttk.Treeview(kiri, columns=kolom, show="tree headings", height=18)
-    tabel.heading("#0", text="Judul"); tabel.column("#0", width=340, stretch=True)
-    tabel.heading("sumber", text="Asal"); tabel.column("sumber", width=130, anchor="w")
+    tabel.heading("#0", text="Judul"); tabel.column("#0", width=300, stretch=True)
+    tabel.heading("sumber", text="Asal"); tabel.column("sumber", width=120, anchor="w")
     tabel.heading("tanggal", text="Tanggal"); tabel.column("tanggal", width=90, anchor="center")
     tabel.heading("tier", text="Tier"); tabel.column("tier", width=44, anchor="center")
+    tabel.heading("tag", text="Tag"); tabel.column("tag", width=160, anchor="w")
     gulir = ttk.Scrollbar(kiri, orient="vertical", command=tabel.yview)
     tabel.configure(yscrollcommand=gulir.set)
     tabel.pack(side="left", fill="both", expand=True); gulir.pack(side="right", fill="y")
@@ -847,16 +852,24 @@ def bangun_jendela_memori(root, app, tulis_log=None):
     def _isi_tabel(*_):
         q = cari_var.get().strip().lower()
         judul_map = JM.semua_judul(app.store)
+        tag_map = TAG.semua_tag(app.store)
+        tag_fil = tag_filter_var.get()
+        tag_unik = sorted({t for ts in tag_map.values() for t in ts})
+        cmb_tag["values"] = ["Semua tag"] + tag_unik
         tabel.delete(*tabel.get_children())
         n = 0
         for ep in d["eps"]:
             judul = judul_map.get(ep.id) or (getattr(ep, "ringkas", "") or "")[:60] or ep.id
             sumber = _nama_sumber(getattr(ep, "sumber", ""))
+            ep_tags = tag_map.get(ep.id, [])
+            if tag_fil and tag_fil != "Semua tag" and tag_fil not in ep_tags:
+                continue
             if q and q not in judul.lower() and q not in str(getattr(ep, "sumber", "")).lower() \
                     and q not in (getattr(ep, "ringkas", "") or "").lower():
                 continue
+            tag_str = ", ".join(ep_tags)
             tabel.insert("", "end", iid=ep.id, text=judul,
-                         values=(sumber, str(getattr(ep, "waktu", ""))[:10], getattr(ep, "tier", "")))
+                         values=(sumber, str(getattr(ep, "waktu", ""))[:10], getattr(ep, "tier", ""), tag_str))
             n += 1
         lbl_jml.config(text=f"{n} memori")
 
@@ -977,6 +990,7 @@ def bangun_jendela_memori(root, app, tulis_log=None):
     btn_hapus.config(command=_hapus)
     btn_riwayat.config(command=_lihat_riwayat)
     cari_var.trace_add("write", _isi_tabel)
+    cmb_tag.bind("<<ComboboxSelected>>", _isi_tabel)
     tabel.bind("<<TreeviewSelect>>", _pilih)
 
     bawah = ttk.Frame(win); bawah.pack(fill="x", padx=12, pady=(4, 12))
@@ -1366,6 +1380,12 @@ def jalankan(konfig: str | None = None) -> int:
         catat_pemakaian("kelola-memori")
         bangun_jendela_memori(root, app, tulis_log)
 
+    def _jalankan_tag():
+        from . import tag
+        tulis_log("Memberi tag otomatis…")
+        hasil = tag.tandai(app.store)
+        tulis_log(f"Selesai: {hasil['ditulis']} episode ditandai dari {hasil['diproses']} total.")
+
     # -- tombol utama (grid 3 kolom)
     tombol = ttk.Frame(root)
     tombol.pack(fill="x", padx=12, pady=6)
@@ -1379,10 +1399,12 @@ def jalankan(konfig: str | None = None) -> int:
         ("Monitor", lambda: buka("http://127.0.0.1:8790/", "monitor")),
         ("Graf", lambda: buka("http://127.0.0.1:8790/graf", "graf")),
         ("Timeline", lambda: buka("http://127.0.0.1:8790/timeline", "timeline")),
+        ("Digest", lambda: buka("http://127.0.0.1:8790/digest", "digest")),
         ("Buka catatan", lambda: jalankan_aksi("catatan", aksi_catatan)),
         ("Koneksi AI", buka_koneksi),
         ("Rapikan nama", buka_judul),
         ("Kelola memori", buka_memori),
+        ("Tag otomatis", lambda: _jalankan_tag()),
     ]
     for idx, (teks, cmd) in enumerate(daftar_tombol):
         ttk.Button(tombol, text=teks, command=cmd).grid(

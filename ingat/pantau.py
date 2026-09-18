@@ -62,8 +62,10 @@ def hitungan_tinjau_snapshot(app: Aplikasi) -> dict:
 def timeline_data(app: Aplikasi) -> dict:
     """Episode dikelompokkan per hari, terbaru dulu. Maks 200 episode terbaru."""
     from . import judul_memori as JM
+    from . import tag as TAG
     episodes = list(reversed(app.store.episode_semua()))[:200]
     judul_map = JM.semua_judul(app.store)
+    tag_map = TAG.semua_tag(app.store)
     hari: dict[str, list] = {}
     for ep in episodes:
         tanggal = (getattr(ep, "waktu", "") or "")[:10]
@@ -77,6 +79,7 @@ def timeline_data(app: Aplikasi) -> dict:
             "sumber": getattr(ep, "sumber", ""),
             "tier": getattr(ep, "tier", ""),
             "jenis": getattr(ep, "jenis_kejadian", ""),
+            "tag": tag_map.get(ep.id, []),
         }
         hari.setdefault(tanggal, []).append(item)
     return {"hari": [{"tanggal": k, "episode": v} for k, v in hari.items()]}
@@ -103,6 +106,24 @@ def _buat_handler(app: Aplikasi):
                                    f'{{"galat": "static/{nama} tidak ditemukan"}}'.encode("utf-8"))
 
         def do_GET(self):
+            if self.path == "/digest/data":
+                from .digest import digest_7_hari
+                isi = json.dumps(digest_7_hari(app), ensure_ascii=False).encode("utf-8")
+                return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path.startswith("/digest/data/"):
+                from .digest import digest_hari, digest_rentang
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(self.path)
+                tgl = parsed.path.split("/")[-1]
+                qs = parse_qs(parsed.query)
+                if "sampai" in qs:
+                    data = digest_rentang(app.store, tgl, qs["sampai"][0])
+                else:
+                    data = digest_hari(app.store, tgl)
+                isi = json.dumps(data, ensure_ascii=False).encode("utf-8")
+                return self._kirim(200, "application/json; charset=utf-8", isi)
+            if self.path in ("/digest", "/digest/"):
+                return self._html(os.path.join(_STATIK, "digest.html"), "digest.html")
             if self.path == "/data":
                 isi = json.dumps(snapshot(app), ensure_ascii=False).encode("utf-8")
                 return self._kirim(200, "application/json; charset=utf-8", isi)
