@@ -2,101 +2,128 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>ingat · Monitor</title>
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --panel2:#fbfcfd; --tepi:#e3e6ea; --tepi2:#eef1f4;
-    --teks:#1c2024; --redup:#6b7280; --samar:#9aa1ab;
-    --aksen:#2563eb; --ok:#16a34a; --hati:#d97706; --bahaya:#dc2626; --dingin:#0891b2;
-    --bayang:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
-    --bayang-naik:0 6px 16px rgba(17,24,39,.10), 0 2px 4px rgba(17,24,39,.06);
-    --r:12px;
+    --bg:#f5f5f7; --kaca:rgba(255,255,255,.72); --kartu:#ffffff; --kartu2:#fafafc;
+    --tinta:#1d1d1f; --tinta2:#6e6e73; --tinta3:#aeaeb2;
+    --garis:rgba(0,0,0,.08); --garis2:rgba(0,0,0,.05);
+    --biru:#0071e3; --hijau:#34c759; --oranye:#ff9f0a; --merah:#ff3b30; --teal:#5ac8fa; --abu:#8e8e93;
+    --bayang:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --bayang-naik:0 2px 6px rgba(0,0,0,.06),0 18px 40px rgba(0,0,0,.10);
+    --r:18px; --r2:12px; --pil:980px;
+    --lentur:cubic-bezier(.2,.8,.2,1);
   }
   @media (prefers-color-scheme:dark){
-    :root{ --bg:#0e1013; --panel:#181b1f; --panel2:#1d2126; --tepi:#2a2f36; --tepi2:#22262c;
-      --teks:#e6e8ea; --redup:#9aa3ad; --samar:#6b7480;
-      --aksen:#5b8cff; --ok:#4ade80; --hati:#fbbf24; --bahaya:#f87171; --dingin:#38bdf8;
-      --bayang:0 1px 2px rgba(0,0,0,.4); --bayang-naik:0 8px 24px rgba(0,0,0,.5);}
+    :root{ --bg:#000; --kaca:rgba(28,28,30,.66); --kartu:#1c1c1e; --kartu2:#242426;
+      --tinta:#f5f5f7; --tinta2:#a1a1a6; --tinta3:#636366;
+      --garis:rgba(255,255,255,.10); --garis2:rgba(255,255,255,.06);
+      --biru:#0a84ff; --hijau:#30d158; --oranye:#ff9f0a; --merah:#ff453a; --teal:#64d2ff; --abu:#98989d;
+      --bayang:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.45);
+      --bayang-naik:0 2px 6px rgba(0,0,0,.5),0 18px 40px rgba(0,0,0,.6);}
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--teks);-webkit-font-smoothing:antialiased;
-    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
-  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px;
-    border-bottom:1px solid var(--tepi);background:color-mix(in srgb,var(--panel) 88%,transparent);
-    backdrop-filter:saturate(1.4) blur(8px);position:sticky;top:0;z-index:5}
-  header h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:7px}
-  header h1::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--aksen);
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--aksen) 22%,transparent)}
-  .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--tepi);
-    color:var(--redup);white-space:nowrap}
-  .badge.otoritatif{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);
-    background:color-mix(in srgb,var(--ok) 9%,transparent)}
-  .badge.relay{color:var(--dingin);border-color:color-mix(in srgb,var(--dingin) 40%,transparent);
-    background:color-mix(in srgb,var(--dingin) 9%,transparent)}
-  .sisa{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:var(--redup);font-size:12px}
-  .status{display:inline-flex;align-items:center;gap:6px}
-  .titik{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
-  .titik.mati{background:var(--bahaya);box-shadow:0 0 0 3px color-mix(in srgb,var(--bahaya) 22%,transparent)}
-  #waktu.denyut{animation:denyut .6s ease}
-  @keyframes denyut{0%{color:var(--aksen)}100%{color:var(--redup)}}
-  @media (prefers-reduced-motion:reduce){#waktu.denyut{animation:none}}
-  .tombol{font:inherit;font-size:12px;cursor:pointer;background:var(--panel);color:var(--teks);
-    border:1px solid var(--tepi);border-radius:8px;padding:6px 12px;text-decoration:none;
-    display:inline-flex;align-items:center;gap:5px;transition:border-color .15s, background .15s, transform .05s}
-  .tombol:hover{border-color:var(--aksen);background:var(--panel2)}
-  .tombol:active{transform:translateY(1px)}
-  :focus-visible{outline:2px solid var(--aksen);outline-offset:2px;border-radius:8px}
-  main{max-width:1120px;margin:0 auto;padding:22px 20px}
-  .kabar{margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
-  .lonceng{padding:12px 15px;border-radius:10px;font-weight:500;line-height:1.45;
-    border:1px solid transparent;display:flex;gap:10px;align-items:flex-start}
-  .lonceng b{font-weight:650}
-  .lonceng.bahaya{background:color-mix(in srgb,var(--bahaya) 12%,var(--panel));border-color:color-mix(in srgb,var(--bahaya) 32%,transparent);color:var(--bahaya)}
-  .lonceng.hati{background:color-mix(in srgb,var(--hati) 12%,var(--panel));border-color:color-mix(in srgb,var(--hati) 32%,transparent);color:var(--hati)}
-  .lonceng.tenang{background:color-mix(in srgb,var(--ok) 10%,var(--panel));border-color:color-mix(in srgb,var(--ok) 28%,transparent);color:var(--ok)}
-  .lonceng.info{background:var(--panel);border-color:var(--tepi);color:var(--redup)}
-  .kartu-baris{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:20px}
-  .kartu{position:relative;background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);
-    padding:15px 16px;box-shadow:var(--bayang);transition:transform .12s, box-shadow .12s, border-color .12s;overflow:hidden}
-  .kartu:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik);border-color:color-mix(in srgb,var(--tepi) 40%,var(--aksen))}
-  .kartu.utama::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--aksen)}
-  .kartu .angka{font-size:31px;font-weight:680;line-height:1.05;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
-  .kartu .judul{color:var(--redup);font-size:11.5px;margin-top:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-  .kartu .imbuh{color:var(--samar);font-size:12px;margin-top:7px}
-  .kartu .imbuh.peringatan{color:var(--hati)}
+  body{margin:0;background:var(--bg);color:var(--tinta);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Inter,Roboto,sans-serif;
+    background-image:radial-gradient(60% 40% at 15% 0%,color-mix(in srgb,var(--biru) 10%,transparent),transparent 70%)}
+  :focus-visible{outline:3px solid color-mix(in srgb,var(--biru) 45%,transparent);outline-offset:2px;border-radius:var(--r2)}
+
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 20px;
+    border-bottom:1px solid var(--garis);background:var(--kaca);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);position:sticky;top:0;z-index:5}
+  .logo{width:26px;height:26px;border-radius:7px;flex:none;position:relative;
+    background:linear-gradient(135deg,var(--biru),#af52de);box-shadow:0 2px 8px color-mix(in srgb,var(--biru) 40%,transparent)}
+  .logo::after{content:"";position:absolute;inset:7.5px;border-radius:50%;background:#fff}
+  header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.02em}
+  .badge{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:var(--pil);white-space:nowrap;
+    color:var(--tinta2);background:color-mix(in srgb,var(--tinta) 6%,transparent)}
+  .badge.otoritatif{color:var(--hijau);background:color-mix(in srgb,var(--hijau) 12%,transparent)}
+  .badge.relay{color:var(--teal);background:color-mix(in srgb,var(--teal) 14%,transparent)}
+  .sisa{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px;color:var(--tinta2);font-size:12.5px}
+  .status{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--pil);
+    background:color-mix(in srgb,var(--tinta) 6%,transparent);font-weight:500}
+  .titik{width:8px;height:8px;border-radius:50%;background:var(--hijau);display:inline-block;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--hijau) 25%,transparent);animation:denyut 2.4s ease-in-out infinite;transition:background .3s}
+  .titik.mati{background:var(--merah);box-shadow:0 0 0 3px color-mix(in srgb,var(--merah) 25%,transparent);animation:none}
+  @keyframes denyut{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--hijau) 25%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--hijau) 8%,transparent)}}
+  #waktu{font-variant-numeric:tabular-nums}
+  #waktu.denyut{animation:kedip .6s ease}
+  @keyframes kedip{0%{color:var(--biru)}100%{color:var(--tinta2)}}
+
+  .tombol{font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--tinta);text-decoration:none;
+    background:var(--kartu);border:1px solid var(--garis);border-radius:var(--pil);padding:7px 14px;
+    display:inline-flex;align-items:center;gap:6px;box-shadow:var(--bayang);
+    transition:transform .14s var(--lentur),box-shadow .18s,background .18s,border-color .18s}
+  .tombol:hover{box-shadow:var(--bayang-naik);transform:translateY(-1px);border-color:color-mix(in srgb,var(--biru) 40%,var(--garis))}
+  .tombol:active{transform:scale(.955);box-shadow:none}
+  .tombol.utama{background:var(--biru);color:#fff;border-color:transparent}
+  .tombol.utama:hover{box-shadow:0 6px 18px color-mix(in srgb,var(--biru) 38%,transparent)}
+
+  main{max-width:1120px;margin:0 auto;padding:26px 20px}
+  .kabar{margin-bottom:18px;display:flex;flex-direction:column;gap:10px}
+  .lonceng{padding:13px 16px;border-radius:var(--r2);font-weight:500;line-height:1.45;display:flex;gap:10px;align-items:flex-start;
+    animation:naik .4s var(--lentur) both;border:1px solid transparent}
+  .lonceng b{font-weight:700}
+  .lonceng.bahaya{background:color-mix(in srgb,var(--merah) 12%,var(--kartu));color:var(--merah);border-color:color-mix(in srgb,var(--merah) 25%,transparent)}
+  .lonceng.hati{background:color-mix(in srgb,var(--oranye) 13%,var(--kartu));color:color-mix(in srgb,var(--oranye) 80%,var(--tinta));border-color:color-mix(in srgb,var(--oranye) 28%,transparent)}
+  .lonceng.tenang{background:color-mix(in srgb,var(--hijau) 11%,var(--kartu));color:color-mix(in srgb,var(--hijau) 75%,var(--tinta));border-color:color-mix(in srgb,var(--hijau) 25%,transparent)}
+  .lonceng.info{background:var(--kartu);color:var(--tinta2);border-color:var(--garis2);box-shadow:var(--bayang)}
+  @keyframes naik{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .kartu-baris{display:grid;grid-template-columns:repeat(auto-fit,minmax(164px,1fr));gap:14px;margin-bottom:22px}
+  .kartu{position:relative;background:var(--kartu);border:1px solid var(--garis2);border-radius:var(--r);padding:18px 18px 16px;
+    box-shadow:var(--bayang);overflow:hidden;cursor:default;animation:naik .45s var(--lentur) both;
+    transition:transform .18s var(--lentur),box-shadow .2s}
+  .kartu:nth-child(2){animation-delay:.04s}.kartu:nth-child(3){animation-delay:.08s}.kartu:nth-child(4){animation-delay:.12s}
+  .kartu:nth-child(5){animation-delay:.16s}.kartu:nth-child(6){animation-delay:.2s}
+  .kartu:hover{transform:translateY(-3px);box-shadow:var(--bayang-naik)}
+  .kartu:active{transform:scale(.975)}
+  .kartu.utama{background:linear-gradient(140deg,var(--biru),color-mix(in srgb,var(--biru) 70%,#af52de));color:#fff;border-color:transparent;
+    box-shadow:0 10px 28px color-mix(in srgb,var(--biru) 38%,transparent)}
+  .kartu.utama .judul,.kartu.utama .imbuh{color:rgba(255,255,255,.8)}
+  .kartu .angka{font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+  .kartu .judul{color:var(--tinta2);font-size:12px;margin-top:6px;font-weight:600}
+  .kartu .imbuh{color:var(--tinta3);font-size:12px;margin-top:6px;font-weight:500}
+  .kartu .imbuh.peringatan{color:var(--oranye)}
+
   .panel-baris{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:760px){.panel-baris{grid-template-columns:1fr}}
-  .panel{background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);padding:16px 18px;box-shadow:var(--bayang)}
-  .panel h2{font-size:12px;margin:0 0 15px;text-transform:uppercase;letter-spacing:.6px;color:var(--redup);font-weight:650}
-  .rincian{display:flex;flex-direction:column;gap:11px}
-  .rinci{display:grid;grid-template-columns:104px 1fr 40px;align-items:center;gap:11px;font-size:13px}
+  .panel{background:var(--kartu);border:1px solid var(--garis2);border-radius:var(--r);padding:20px 22px;box-shadow:var(--bayang);
+    animation:naik .5s var(--lentur) both;animation-delay:.2s}
+  .panel h2{font-size:15px;margin:0 0 16px;font-weight:700;letter-spacing:-.02em}
+  .rincian{display:flex;flex-direction:column;gap:12px}
+  .rinci{display:grid;grid-template-columns:104px 1fr 40px;align-items:center;gap:12px;font-size:13.5px;
+    padding:4px 6px;margin:0 -6px;border-radius:9px;transition:background .16s}
+  .rinci:hover{background:color-mix(in srgb,var(--tinta) 4%,transparent)}
   @media(max-width:400px){.rinci{grid-template-columns:88px 1fr 34px;gap:8px}}
-  .rinci .nama{color:var(--redup);text-transform:capitalize}
-  .rinci .nilai{text-align:right;font-variant-numeric:tabular-nums;font-weight:650}
-  .rinci .nilai.nol{color:var(--samar);font-weight:500}
-  .bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--redup) 16%,transparent);overflow:hidden}
-  .bar>span{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.22,1,.36,1)}
-  .s-hipotesis>span,.s-draf>span{background:var(--samar)}
-  .s-usulan>span,.s-teruji>span{background:var(--aksen)}
-  .s-aturan>span,.s-aktif>span{background:var(--ok)}
-  .s-dipersempit>span{background:var(--hati)}
-  .s-ditarik>span{background:var(--bahaya)}
-  /* rangka-muat (skeleton) saat data pertama belum tiba */
-  .rangka{background:var(--panel);border:1px solid var(--tepi);border-radius:var(--r);height:88px;
-    box-shadow:var(--bayang);position:relative;overflow:hidden}
+  .rinci .nama{color:var(--tinta2);text-transform:capitalize;font-weight:500}
+  .rinci .nilai{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .rinci .nilai.nol{color:var(--tinta3);font-weight:500}
+  .bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--tinta) 8%,transparent);overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:999px;transition:width .7s var(--lentur)}
+  .s-hipotesis>span,.s-draf>span{background:var(--abu)}
+  .s-usulan>span,.s-teruji>span{background:var(--biru)}
+  .s-aturan>span,.s-aktif>span{background:var(--hijau)}
+  .s-dipersempit>span{background:var(--oranye)}
+  .s-ditarik>span{background:var(--merah)}
+
+  .rangka{background:var(--kartu);border:1px solid var(--garis2);border-radius:var(--r);height:96px;box-shadow:var(--bayang);position:relative;overflow:hidden}
   .rangka::after{content:"";position:absolute;inset:0;
-    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--redup) 10%,transparent),transparent);
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--tinta) 6%,transparent),transparent);
     transform:translateX(-100%);animation:geser 1.3s infinite}
   @keyframes geser{100%{transform:translateX(100%)}}
-  @media (prefers-reduced-motion:reduce){.rangka::after{animation:none}}
-  footer{max-width:1120px;margin:0 auto;padding:10px 20px 30px;color:var(--samar);font-size:12px}
-  code{background:color-mix(in srgb,var(--redup) 13%,transparent);padding:1px 5px;border-radius:5px;font-size:12px;color:var(--redup)}
+
+  footer{max-width:1120px;margin:0 auto;padding:12px 20px 34px;color:var(--tinta3);font-size:12px}
+  code{background:color-mix(in srgb,var(--tinta) 7%,transparent);padding:2px 7px;border-radius:6px;font-size:12px;color:var(--tinta2);
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <header>
+  <div class="logo" aria-hidden="true"></div>
   <h1>ingat · Monitor</h1>
   <span id="mode" class="badge">…</span>
   <span id="embed" class="badge" title="embedder">…</span>
@@ -105,7 +132,7 @@
     <span id="waktu" aria-live="polite">—</span>
     <a class="tombol" href="/graf" aria-label="Buka tampilan graf">◕ Graf</a>
     <button class="tombol" id="jeda" aria-label="Jeda pembaruan otomatis">⏸ Jeda</button>
-    <button class="tombol" id="segar" aria-label="Segarkan sekarang">↻ Segarkan</button>
+    <button class="tombol utama" id="segar" aria-label="Segarkan sekarang">↻ Segarkan</button>
   </div>
 </header>
 <main>
@@ -149,9 +176,10 @@ function rinci(wadah, kelas, nama, nilai, maks){
   const pct = maks>0 ? Math.round(nilai/maks*100) : 0;
   const d=document.createElement("div"); d.className="rinci";
   d.innerHTML=`<span class="nama">${nama}</span>`+
-    `<span class="bar ${kelas}"><span style="width:${pct}%"></span></span>`+
+    `<span class="bar ${kelas}"><span style="width:0%"></span></span>`+
     `<span class="nilai${nilai?"":" nol"}">${nilai}</span>`;
   wadah.appendChild(d);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ d.querySelector(".bar>span").style.width=pct+"%"; }));
 }
 
 function lonceng(kelas, html){
@@ -168,7 +196,6 @@ function render(d){
   el("embed").textContent = (e.jenis||"?")+" · "+(e.model||"?")+(e.dim?(" · "+e.dim+"d"):"");
   el("kaki").textContent = "ingat v"+(d.versi||"?")+" · "+(d.dir_data||"");
 
-  // ---- kabar: alarm > peringatan > kosong > sehat
   const kabar = el("kabar"); kabar.innerHTML="";
   const alarm = m.alarm||[];
   alarm.forEach(a=> lonceng("bahaya","⚠ <span>"+(typeof a==="string"?a:JSON.stringify(a))+"</span>"));
@@ -176,7 +203,6 @@ function render(d){
   if(berturut>=3) lonceng("hati","⚠ <span><b>"+berturut+" sesi berturut</b> tanpa episode — hook penangkap mungkin tidak jalan.</span>");
   if(N(m.tinjau_ulang)>0) lonceng("hati","✎ <span><b>"+m.tinjau_ulang+"</b> item menunggu tinjau ulang.</span>");
 
-  // ---- kartu utama
   const pjl = N(m.pelajaran_hipotesis)+N(m.pelajaran_usulan)+N(m.pelajaran_aturan)+N(m.pelajaran_dipersempit)+N(m.pelajaran_ditarik);
   const prl = N(m.prosedur_draf)+N(m.prosedur_teruji)+N(m.prosedur_aktif)+N(m.prosedur_dipersempit)+N(m.prosedur_ditarik);
   const totalIsi = N(m.episode_aktif)+pjl+prl+N(m.norma);

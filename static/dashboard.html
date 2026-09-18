@@ -3,103 +3,216 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>ingat — dashboard memori</title>
 <style>
   :root{
-    --dasar:#E4E7E1; --dasar2:#DCDFD8; --tinta:#1F2A24; --garis:#B9C2B7;
-    --pudar:#7C8A7D; --cap:#A23B2E; --benang:#C9622E; --emas:#8C7A3E;
-    --gugur:#5B6B5C; --panel:#EEF0EA;
-    --serif: Georgia,"Iowan Old Style","Palatino Linotype",serif;
-    --sans: -apple-system,"Segoe UI",Roboto,sans-serif;
+    --bg:#f5f5f7; --bg2:#ececf0; --kaca:rgba(255,255,255,.72); --kaca-tebal:rgba(255,255,255,.86);
+    --kartu:#ffffff; --tinta:#1d1d1f; --tinta2:#6e6e73; --tinta3:#aeaeb2;
+    --garis:rgba(0,0,0,.08); --garis2:rgba(0,0,0,.05);
+    --biru:#0071e3; --biru-tekan:#0060c0; --hijau:#34c759; --oranye:#ff9f0a; --merah:#ff3b30; --abu:#8e8e93; --ungu:#af52de;
+    --bayang:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --bayang-naik:0 2px 6px rgba(0,0,0,.06),0 18px 40px rgba(0,0,0,.10);
+    --r:18px; --r2:12px; --pil:980px;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI Variable","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    --lentur:cubic-bezier(.2,.8,.2,1);
+    --papan-bg:radial-gradient(ellipse at 50% 30%,#ffffff 0%,#f0f0f4 55%,#e6e6ec 100%);
+    --label:#3a3a3c; --label-tepi:#f0f0f4; --simpul-tepi:#ffffff;
   }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#000000; --bg2:#0d0d0f; --kaca:rgba(28,28,30,.66); --kaca-tebal:rgba(28,28,30,.86);
+      --kartu:#1c1c1e; --tinta:#f5f5f7; --tinta2:#a1a1a6; --tinta3:#636366;
+      --garis:rgba(255,255,255,.10); --garis2:rgba(255,255,255,.06);
+      --biru:#0a84ff; --biru-tekan:#2f96ff; --hijau:#30d158; --oranye:#ff9f0a; --merah:#ff453a; --abu:#98989d; --ungu:#bf5af2;
+      --bayang:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.45);
+      --bayang-naik:0 2px 6px rgba(0,0,0,.5),0 18px 40px rgba(0,0,0,.6);
+      --papan-bg:radial-gradient(ellipse at 50% 30%,#1c1c1e 0%,#111114 55%,#000 100%);
+      --label:#d1d1d6; --label-tepi:#111114; --simpul-tepi:#1c1c1e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#000000; --bg2:#0d0d0f; --kaca:rgba(28,28,30,.66); --kaca-tebal:rgba(28,28,30,.86);
+    --kartu:#1c1c1e; --tinta:#f5f5f7; --tinta2:#a1a1a6; --tinta3:#636366;
+    --garis:rgba(255,255,255,.10); --garis2:rgba(255,255,255,.06);
+    --biru:#0a84ff; --biru-tekan:#2f96ff; --hijau:#30d158; --oranye:#ff9f0a; --merah:#ff453a; --abu:#98989d; --ungu:#bf5af2;
+    --bayang:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.45);
+    --bayang-naik:0 2px 6px rgba(0,0,0,.5),0 18px 40px rgba(0,0,0,.6);
+    --papan-bg:radial-gradient(ellipse at 50% 30%,#1c1c1e 0%,#111114 55%,#000 100%);
+    --label:#d1d1d6; --label-tepi:#111114; --simpul-tepi:#1c1c1e;
+  }
+
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--dasar);color:var(--tinta);font-family:var(--sans);font-size:14px}
-  #app{display:none;height:100vh;grid-template-columns:240px 1fr 1fr;grid-template-rows:auto 1fr}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--tinta);font-family:var(--sans);font-size:14px;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.01em}
+  button,input{font-family:inherit}
+  :focus-visible{outline:3px solid color-mix(in srgb,var(--biru) 45%,transparent);outline-offset:2px;border-radius:var(--r2)}
+  ::selection{background:color-mix(in srgb,var(--biru) 25%,transparent)}
+
+  /* ── efek tekan universal ── */
+  .tekan{transition:transform .14s var(--lentur),background .18s,box-shadow .18s,border-color .18s,opacity .18s}
+  .tekan:active{transform:scale(.965)}
+
+  /* ── tombol ── */
+  .tombol{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px 18px;
+    border:0;border-radius:var(--pil);font-size:15px;font-weight:600;cursor:pointer;
+    background:var(--biru);color:#fff;
+    transition:transform .14s var(--lentur),background .18s,box-shadow .18s,filter .18s}
+  .tombol:hover{background:var(--biru-tekan);box-shadow:0 6px 18px color-mix(in srgb,var(--biru) 35%,transparent)}
+  .tombol:active{transform:scale(.965);filter:brightness(.94);box-shadow:none}
+  .tombol.sekunder{background:color-mix(in srgb,var(--tinta) 6%,transparent);color:var(--tinta)}
+  .tombol.sekunder:hover{background:color-mix(in srgb,var(--tinta) 10%,transparent);box-shadow:none}
+  .tombol.putih{background:var(--kartu);color:var(--tinta);border:1px solid var(--garis);box-shadow:var(--bayang)}
+  .tombol.putih:hover{box-shadow:var(--bayang-naik);transform:translateY(-1px)}
+  .tombol.putih:active{transform:scale(.965)}
+  .tombol.kecil{width:auto;padding:7px 14px;font-size:13px}
+  .tombol.hantu{background:transparent;color:var(--biru);width:auto;padding:6px 10px;font-weight:500}
+  .tombol.hantu:hover{background:color-mix(in srgb,var(--biru) 10%,transparent);box-shadow:none}
+
+  /* ── layout aplikasi ── */
+  #app{display:none;height:100vh;height:100dvh;grid-template-columns:270px 1fr 1fr;grid-template-rows:auto 1fr;
+    animation:muncul .45s var(--lentur) both}
   #app.siap{display:grid}
-  header{grid-column:1/4;display:flex;align-items:baseline;gap:10px;padding:10px 16px;border-bottom:1px solid var(--garis);background:var(--panel)}
-  header h1{font-family:var(--serif);font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
-  header .sub{color:var(--pudar);font-size:12px}
-  header .kanan{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:12px;color:var(--pudar)}
-  header .titik{width:7px;height:7px;border-radius:50%;background:var(--gugur);display:inline-block;margin-right:5px}
+  @keyframes muncul{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:none}}
 
-  nav{border-right:1px solid var(--garis);overflow-y:auto;background:var(--dasar2)}
-  nav .grup{padding:10px 14px 4px}
-  nav .grup-judul{font-family:var(--serif);font-size:12px;color:var(--pudar);display:flex;align-items:center;gap:6px;margin-bottom:2px}
-  nav .dot{width:7px;height:7px;border-radius:50%;flex:none}
-  nav .baris{display:block;width:100%;text-align:left;padding:5px 14px 5px 26px;border:0;background:transparent;
-             border-bottom:1px solid rgba(0,0,0,.05);font-family:var(--sans);font-size:12.5px;color:var(--tinta);
-             cursor:pointer;line-height:1.4}
-  nav .baris:hover{background:rgba(0,0,0,.04)}
-  nav .baris.aktif{background:var(--panel);box-shadow:inset 3px 0 0 var(--benang)}
-  nav .baris .meta{display:block;color:var(--pudar);font-size:10.5px;margin-top:1px}
-  nav .kosong{padding:14px;color:var(--pudar);font-size:12.5px}
+  header{grid-column:1/4;display:flex;align-items:center;gap:12px;padding:12px 20px;
+    background:var(--kaca);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid var(--garis);position:relative;z-index:3}
+  header .logo{width:28px;height:28px;border-radius:8px;flex:none;
+    background:linear-gradient(135deg,var(--biru),var(--ungu));
+    box-shadow:0 2px 8px color-mix(in srgb,var(--biru) 40%,transparent);position:relative}
+  header .logo::after{content:"";position:absolute;inset:8px;border-radius:50%;background:#fff;opacity:.95}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.02em}
+  header .sub{color:var(--tinta2);font-size:13px;font-weight:500}
+  header .kanan{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--tinta2)}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:var(--pil);
+    background:color-mix(in srgb,var(--tinta) 6%,transparent);font-weight:500;white-space:nowrap}
+  .titik{width:8px;height:8px;border-radius:50%;background:var(--abu);display:inline-block;flex:none;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--abu) 22%,transparent);transition:background .3s,box-shadow .3s}
+  .titik.ok{background:var(--hijau);box-shadow:0 0 0 3px color-mix(in srgb,var(--hijau) 25%,transparent)}
+  .titik.gagal{background:var(--merah);box-shadow:0 0 0 3px color-mix(in srgb,var(--merah) 25%,transparent)}
+  .titik.ok{animation:denyut 2.4s ease-in-out infinite}
+  @keyframes denyut{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--hijau) 25%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--hijau) 8%,transparent)}}
 
-  main{overflow-y:auto;padding:22px 26px;border-right:1px solid var(--garis);background:var(--dasar)}
-  main h2{font-family:var(--serif);font-size:22px;margin:0 0 10px}
-  main .stempel{border:1px solid var(--garis);border-radius:2px;padding:8px 12px;display:inline-block;
-                 font-size:11.5px;color:var(--pudar);margin-bottom:16px;background:var(--panel)}
-  main .isi{white-space:pre-wrap;line-height:1.65;max-width:62ch;font-size:13.5px}
-  main .placeholder{color:var(--pudar);margin-top:60px;text-align:center;font-family:var(--serif);font-style:italic}
+  /* ── registri (sidebar) ── */
+  nav{overflow-y:auto;background:var(--bg2);border-right:1px solid var(--garis);padding:10px 10px 24px;
+    scrollbar-width:thin;scrollbar-color:var(--garis) transparent}
+  nav .grup{margin-bottom:14px}
+  nav .grup-judul{font-size:11.5px;font-weight:700;color:var(--tinta2);text-transform:uppercase;letter-spacing:.06em;
+    display:flex;align-items:center;gap:7px;padding:8px 12px 6px}
+  nav .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  nav .grup-judul .jml{margin-left:auto;font-weight:600;color:var(--tinta3);font-variant-numeric:tabular-nums}
+  nav .baris{display:block;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:var(--r2);
+    background:transparent;font-size:13.5px;color:var(--tinta);cursor:pointer;line-height:1.35;
+    transition:background .16s,transform .14s var(--lentur),box-shadow .18s}
+  nav .baris:hover{background:color-mix(in srgb,var(--tinta) 5%,transparent)}
+  nav .baris:active{transform:scale(.975)}
+  nav .baris.aktif{background:var(--biru);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--biru) 35%,transparent)}
+  nav .baris .meta{display:block;color:var(--tinta2);font-size:11.5px;margin-top:2px;font-weight:500}
+  nav .baris.aktif .meta{color:rgba(255,255,255,.75)}
+  nav .kosong{padding:24px 14px;color:var(--tinta2);font-size:13px;text-align:center;line-height:1.5}
 
-  #papan{position:relative;overflow:hidden;background:
-      radial-gradient(circle at 50% 40%, #E9E4D4 0%, #DED6C0 60%, #D3C9AE 100%);
-      background-color:#DED6C0}
-  #papan svg{width:100%;height:100%;display:block;cursor:grab}
-  #papan .judul-panel{position:absolute;top:10px;left:14px;font-family:var(--serif);font-size:13px;color:#4A3E2A;z-index:2}
-  #papan .legenda{position:absolute;bottom:10px;left:14px;font-size:10.5px;color:#4A3E2A;z-index:2;display:flex;gap:10px;flex-wrap:wrap;max-width:70%}
-  #papan .legenda span{display:inline-flex;align-items:center;gap:4px}
-  #papan .legenda i{width:8px;height:8px;border-radius:50%;display:inline-block}
-  .node-label{font-family:var(--sans);font-size:10.5px;fill:#33291B;paint-order:stroke;stroke:#DED6C0;stroke-width:3px;pointer-events:none}
-  .simpul{cursor:grab}
+  /* ── catatan (utama) ── */
+  main{overflow-y:auto;padding:28px 32px;background:var(--bg);border-right:1px solid var(--garis)}
+  main .kartu{background:var(--kartu);border-radius:var(--r);padding:26px 28px;box-shadow:var(--bayang);
+    border:1px solid var(--garis2);max-width:72ch;animation:naik .4s var(--lentur) both}
+  @keyframes naik{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  main h2{font-size:24px;margin:0 0 10px;font-weight:700;letter-spacing:-.025em;line-height:1.2}
+  main .stempel{display:inline-flex;align-items:center;gap:6px;border-radius:var(--pil);padding:5px 12px;
+    font-size:12px;font-weight:600;color:var(--tinta2);margin-bottom:18px;
+    background:color-mix(in srgb,var(--tinta) 6%,transparent)}
+  main .isi{white-space:pre-wrap;line-height:1.7;font-size:14.5px;color:var(--tinta)}
+  main .placeholder{color:var(--tinta2);margin-top:22vh;text-align:center;font-size:15px;line-height:1.6;
+    display:flex;flex-direction:column;align-items:center;gap:14px}
+  main .placeholder .ikon{width:56px;height:56px;border-radius:18px;background:var(--kartu);box-shadow:var(--bayang);
+    display:grid;place-items:center;font-size:24px;border:1px solid var(--garis2)}
+
+  /* ── papan bukti (graf) ── */
+  #papan{position:relative;overflow:hidden;background:var(--papan-bg)}
+  #papan svg{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+  #papan .judul-panel{position:absolute;top:14px;left:16px;z-index:2;font-size:12.5px;font-weight:600;color:var(--tinta2);
+    padding:7px 13px;border-radius:var(--pil);background:var(--kaca);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--garis2);box-shadow:var(--bayang)}
+  #papan .legenda{position:absolute;bottom:14px;left:16px;z-index:2;display:flex;gap:10px;flex-wrap:wrap;max-width:calc(100% - 32px);
+    font-size:11.5px;font-weight:500;color:var(--tinta2);padding:8px 13px;border-radius:var(--r2);
+    background:var(--kaca);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--garis2);box-shadow:var(--bayang)}
+  #papan .legenda span{display:inline-flex;align-items:center;gap:5px}
+  #papan .legenda i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .node-label{font-family:var(--sans);font-size:11px;font-weight:500;fill:var(--label);paint-order:stroke;
+    stroke:var(--label-tepi);stroke-width:3.5px;pointer-events:none;transition:opacity .25s}
+  .simpul{cursor:grab;transition:r .2s var(--lentur),filter .2s}
+  .simpul:hover{filter:drop-shadow(0 0 6px rgba(0,113,227,.55))}
   .simpul:active{cursor:grabbing}
-  .benang-garis{stroke:var(--benang);stroke-opacity:.55;stroke-width:1.3}
-  .benang-garis.mengganti{stroke:var(--emas);stroke-dasharray:3 3}
-  .benang-garis.instrumen{stroke:var(--gugur);stroke-opacity:.4}
-  .redup{opacity:.15}
+  .benang-garis{stroke:var(--biru);stroke-opacity:.45;stroke-width:1.3;transition:stroke-opacity .25s}
+  .benang-garis.mengganti{stroke:var(--oranye);stroke-dasharray:4 4}
+  .benang-garis.instrumen{stroke:var(--abu);stroke-opacity:.35}
+  .redup{opacity:.12}
+  circle,line,g{transition:opacity .25s}
 
-  #gerbang{position:fixed;inset:0;background:var(--dasar);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:16px;overflow-y:auto}
-  #gerbang .kotak{background:var(--panel);border:1px solid var(--garis);border-radius:4px;padding:26px 30px;width:340px;max-width:100%}
-  #gerbang h1{font-family:var(--serif);margin:0 0 4px;font-size:19px}
-  #gerbang p{color:var(--pudar);font-size:12.5px;margin:0 0 16px;line-height:1.5}
-  #gerbang input{width:100%;padding:8px 10px;font:inherit;border:1px solid var(--garis);border-radius:3px;margin-bottom:10px}
-  #gerbang button{width:100%;padding:8px;background:var(--tinta);color:var(--dasar);border:0;border-radius:3px;cursor:pointer;font:inherit}
-  #gerbang .galat{color:var(--cap);font-size:12px;min-height:16px}
+  /* ── gerbang (login) ── */
+  #gerbang{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;
+    background:var(--bg);
+    background-image:radial-gradient(60% 50% at 20% 10%,color-mix(in srgb,var(--biru) 14%,transparent),transparent 70%),
+                     radial-gradient(50% 40% at 85% 90%,color-mix(in srgb,var(--ungu) 12%,transparent),transparent 70%)}
+  #gerbang .kotak{width:380px;max-width:100%;padding:34px 32px 26px;border-radius:26px;
+    background:var(--kaca-tebal);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);
+    border:1px solid color-mix(in srgb,var(--garis) 120%,transparent);box-shadow:var(--bayang-naik);
+    animation:naik .5s var(--lentur) both}
+  #gerbang .logo{width:60px;height:60px;border-radius:17px;margin:0 auto 16px;
+    background:linear-gradient(135deg,var(--biru),var(--ungu));box-shadow:0 10px 26px color-mix(in srgb,var(--biru) 38%,transparent);
+    position:relative;transition:transform .3s var(--lentur)}
+  #gerbang .logo::after{content:"";position:absolute;inset:17px;border-radius:50%;background:#fff}
+  #gerbang .kotak:hover .logo{transform:rotate(-6deg) scale(1.04)}
+  #gerbang h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.03em;text-align:center}
+  #gerbang p{color:var(--tinta2);font-size:13.5px;margin:6px 0 22px;line-height:1.5;text-align:center}
+  #gerbang p.kecil{font-size:11.5px;margin:0 0 12px;text-align:left;color:var(--tinta3)}
+  #gerbang .pemisah{display:flex;align-items:center;gap:10px;color:var(--tinta3);font-size:11.5px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.06em;margin:16px 0 12px}
+  #gerbang .pemisah::before,#gerbang .pemisah::after{content:"";flex:1;height:1px;background:var(--garis)}
+  #gerbang input{width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--garis);border-radius:var(--r2);
+    background:color-mix(in srgb,var(--kartu) 70%,transparent);color:var(--tinta);margin-bottom:10px;
+    transition:border-color .18s,box-shadow .18s,background .18s}
+  #gerbang input::placeholder{color:var(--tinta3)}
+  #gerbang input:focus{outline:0;border-color:var(--biru);box-shadow:0 0 0 4px color-mix(in srgb,var(--biru) 18%,transparent);background:var(--kartu)}
+  #gerbang .galat{color:var(--merah);font-size:12.5px;font-weight:500;min-height:18px;text-align:center;margin-top:10px}
+  #gerbang .galat:not(:empty){animation:goyang .4s var(--lentur)}
+  @keyframes goyang{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  .g-ikon{width:18px;height:18px;flex:none}
 
-  /* Tab panel — hanya dipakai di layar sempit; di desktop tiga panel tampil bersamaan. */
+  /* ── tab (layar sempit): segmented control ── */
   #tab{display:none}
 
-  /* ---------------------------------------------------------------- layar sempit (HP & tablet portrait)
-     Tata letak desktop `240px 1fr 1fr` menyisakan ~67px per panel di layar 375px — terbaca sebagai
-     rusak, bukan sebagai sempit. Di bawah 820px layout jadi SATU kolom dan satu panel tampil penuh
-     sekali waktu, dipilih lewat tab. Mengutamakan fungsi: setiap panel dapat lebar penuh. */
-  @media (max-width: 820px){
+  @media (max-width:820px){
     #app.siap{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
-    header{grid-column:1;flex-wrap:wrap;gap:6px 10px;padding:8px 12px}
-    header .kanan{width:100%;margin-left:0;gap:10px;font-size:11px}
+    header{grid-column:1;flex-wrap:wrap;gap:8px 10px;padding:10px 14px}
+    header .kanan{width:100%;margin-left:0;gap:8px;font-size:11.5px}
 
-    #tab{display:flex;grid-column:1;border-bottom:1px solid var(--garis);background:var(--dasar2)}
-    #tab button{flex:1;padding:11px 6px;border:0;background:transparent;font:inherit;font-size:13px;
-                color:var(--pudar);cursor:pointer;border-bottom:2px solid transparent;
-                min-height:44px}   /* 44px: target sentuh yang nyaman, bukan angka hiasan */
-    #tab button.aktif{color:var(--tinta);border-bottom-color:var(--benang);background:var(--panel)}
+    #tab{display:flex;grid-column:1;margin:10px 14px 8px;padding:3px;border-radius:var(--r2);
+      background:color-mix(in srgb,var(--tinta) 7%,transparent);position:relative;gap:2px}
+    #tab button{flex:1;padding:8px 6px;border:0;border-radius:9px;background:transparent;font-size:13.5px;font-weight:600;
+      color:var(--tinta2);cursor:pointer;min-height:36px;position:relative;z-index:1;
+      transition:color .2s,transform .14s var(--lentur)}
+    #tab button:active{transform:scale(.96)}
+    #tab button.aktif{color:var(--tinta);background:var(--kartu);box-shadow:0 1px 3px rgba(0,0,0,.12),0 3px 8px rgba(0,0,0,.06)}
 
-    /* Satu panel sekali waktu. `grid-column:1` wajib — tanpa ini panel masih mencari kolom 2/3. */
-    nav, main, #papan{grid-column:1;border-right:0;min-height:0}
-    nav, main, #papan{display:none}
+    nav,main,#papan{grid-column:1;border-right:0;min-height:0;display:none}
     body[data-panel="registri"] nav{display:block}
     body[data-panel="catatan"]  main{display:block}
     body[data-panel="papan"]    #papan{display:block}
 
-    main{padding:16px 14px}
-    main .isi{max-width:none;font-size:14px}      /* 14px: lebih enak dibaca di HP daripada 13.5px */
-    main h2{font-size:19px}
-    main .placeholder{margin-top:32px}
-    nav .baris{padding:10px 12px 10px 22px;font-size:13px}   /* baris lebih tinggi = lebih mudah ditekan */
-    #papan .legenda{max-width:100%;font-size:10px}
-    /* Di HP, label per-simpul saling bertumpuk di klaster padat -> terbaca "sesak".
-       Sembunyikan: graf jadi peta simpul bersih; ketuk simpul memunculkan detailnya di tab Catatan. */
+    main{padding:14px}
+    main .kartu{padding:20px 18px;max-width:none}
+    main .isi{font-size:15px}
+    main h2{font-size:21px}
+    main .placeholder{margin-top:14vh}
+    nav .baris{padding:12px 12px;font-size:14px}
+    #papan .legenda{font-size:10.5px;gap:8px}
     .node-label{display:none}
+    #gerbang .kotak{padding:28px 22px 20px;border-radius:22px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
   }
 </style>
 </head>
@@ -107,31 +220,34 @@
 
 <div id="gerbang">
   <div class="kotak">
+    <div class="logo" aria-hidden="true"></div>
     <h1>ingat</h1>
     <p>Dashboard memori pribadi.</p>
-    <button id="gGoogle" style="background:#fff;color:#1F2A24;border:1px solid var(--garis);margin-bottom:10px">
+    <button id="gGoogle" class="tombol putih">
+      <svg class="g-ikon" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.7l-7.7-6c-2.1 1.4-4.8 2.3-7.8 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
       Masuk dengan Google
     </button>
-    <div style="text-align:center;color:var(--pudar);font-size:11px;margin:2px 0 10px">atau, mandiri (tanpa Google)</div>
-    <input id="gTotp" placeholder="Kode 6 digit dari aplikasi authenticator" inputmode="numeric" maxlength="6" style="margin-bottom:6px">
-    <button id="gTotpMasuk" style="margin-bottom:14px">Masuk dengan kode</button>
-    <div style="text-align:center;color:var(--pudar);font-size:11px;margin:-2px 0 14px">atau, lewat token</div>
-    <p style="font-size:11.5px">Token dan host disimpan di penyimpanan lokal browser ini saja — tidak dikirim ke mana pun selain server ingat milikmu sendiri.</p>
-    <input id="gHost" placeholder="Host, mis. https://memori.contoh-domain.id atau http://127.0.0.1:8765">
-    <input id="gToken" type="password" placeholder="Token (INGAT_TOKEN)">
-    <button id="gMasuk">Buka dengan token</button>
-    <div class="galat" id="gGalat"></div>
+    <div class="pemisah">atau mandiri</div>
+    <input id="gTotp" placeholder="Kode 6 digit authenticator" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+    <button id="gTotpMasuk" class="tombol">Masuk dengan kode</button>
+    <div class="pemisah">atau lewat token</div>
+    <p class="kecil">Token dan host disimpan di penyimpanan lokal browser ini saja — tidak dikirim ke mana pun selain server ingat milikmu sendiri.</p>
+    <input id="gHost" placeholder="Host, mis. https://memori.contoh.id atau http://127.0.0.1:8765" autocomplete="url">
+    <input id="gToken" type="password" placeholder="Token (INGAT_TOKEN)" autocomplete="current-password">
+    <button id="gMasuk" class="tombol sekunder">Buka dengan token</button>
+    <div class="galat" id="gGalat" aria-live="polite"></div>
   </div>
 </div>
 
 <div id="app">
   <header>
+    <div class="logo" aria-hidden="true"></div>
     <h1>ingat</h1>
-    <span class="sub">dashboard memori</span>
+    <span class="sub">Dashboard memori</span>
     <div class="kanan">
-      <span id="hStatus"><span class="titik"></span>menghubungkan…</span>
+      <span class="chip" id="hStatus"><span class="titik"></span>menghubungkan…</span>
       <span id="hLingkup"></span>
-      <a href="/auth/keluar" style="color:var(--pudar);font-size:11px">keluar</a>
+      <a href="/auth/keluar" class="tombol hantu tekan">Keluar</a>
     </div>
   </header>
   <div id="tab" role="tablist">
@@ -140,14 +256,14 @@
     <button type="button" data-panel="papan" role="tab">Papan</button>
   </div>
   <nav id="nav"></nav>
-  <main id="main"><div class="placeholder">Pilih catatan dari Registri atau klik simpul di Papan Bukti</div></main>
+  <main id="main"><div class="placeholder"><div class="ikon">✦</div>Pilih catatan dari Registri<br>atau ketuk simpul di Papan Bukti</div></main>
   <div id="papan">
     <div class="judul-panel">Papan Bukti</div>
     <div class="legenda">
-      <span><i style="background:#1F2A24"></i>pelajaran</span>
-      <span><i style="background:#5B6B5C"></i>prosedur</span>
-      <span><i style="background:#8C7A3E"></i>norma</span>
-      <span><i style="background:#9AA79B"></i>instrumen</span>
+      <span><i style="background:var(--biru)"></i>pelajaran</span>
+      <span><i style="background:var(--hijau)"></i>prosedur</span>
+      <span><i style="background:var(--oranye)"></i>norma</span>
+      <span><i style="background:var(--abu)"></i>instrumen</span>
     </div>
     <svg id="svg"></svg>
   </div>
@@ -186,6 +302,8 @@
       bukaDashboard(window.location.origin, null);
     } catch (e) { gGalat.textContent = 'Tidak bisa menghubungi server.'; }
   });
+  document.getElementById('gTotp').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') document.getElementById('gTotpMasuk').click(); });
+  gToken.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') document.getElementById('gMasuk').click(); });
 
   async function cobaSesiCookie() {
     try {
@@ -216,7 +334,17 @@
   })();
 
   // ---------------------------------------------------------------- state
-  const WARNA_JENIS = { pelajaran: '#1F2A24', prosedur: '#5B6B5C', norma: '#8C7A3E', instrumen: '#9AA79B' };
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  let WARNA_JENIS = {};
+  function segarkanWarna() {
+    WARNA_JENIS = { pelajaran: css('--biru'), prosedur: css('--hijau'), norma: css('--oranye'), instrumen: css('--abu') };
+  }
+  segarkanWarna();
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    segarkanWarna();
+    circleEl.forEach((c, id) => { const n = idKeNode.get(id); if (n) { c.setAttribute('fill', WARNA_JENIS[n.jenis]); c.setAttribute('stroke', css('--simpul-tepi')); } });
+    document.querySelectorAll('nav .dot').forEach((d) => { d.style.background = WARNA_JENIS[d.dataset.jenis]; });
+  });
   let node = [], edge = [], idKeNode = new Map();
 
   async function mulai(host, token) {
@@ -230,11 +358,11 @@
       node = d.nodes.map((n, i) => ({ ...n, x: 300 + Math.cos(i) * 120 + Math.random() * 40, y: 220 + Math.sin(i) * 120 + Math.random() * 40, vx: 0, vy: 0 }));
       edge = d.edges;
       idKeNode = new Map(node.map((n) => [n.id, n]));
-      status.innerHTML = `<span class="titik" style="background:#0a7a2f"></span>${node.length} catatan · ${edge.length} tautan`;
+      status.innerHTML = `<span class="titik ok"></span>${node.length} catatan · ${edge.length} tautan`;
       isiRegistri();
       gambarGraf();
     } catch (e) {
-      status.innerHTML = `<span class="titik" style="background:#A23B2E"></span>gagal: ${e.message}`;
+      status.innerHTML = `<span class="titik gagal"></span>gagal: ${e.message}`;
     }
   }
 
@@ -248,7 +376,7 @@
       const grup = node.filter((n) => n.jenis === j);
       if (!grup.length) continue;
       const g = document.createElement('div'); g.className = 'grup';
-      g.innerHTML = `<div class="grup-judul"><span class="dot" style="background:${WARNA_JENIS[j]}"></span>${namaJenis[j]} (${grup.length})</div>`;
+      g.innerHTML = `<div class="grup-judul"><span class="dot" data-jenis="${j}" style="background:${WARNA_JENIS[j]}"></span>${namaJenis[j]}<span class="jml">${grup.length}</span></div>`;
       for (const n of grup) {
         const b = document.createElement('button'); b.className = 'baris'; b.dataset.id = n.id;
         b.innerHTML = `${n.label}<span class="meta">${n.meta}</span>`;
@@ -257,7 +385,7 @@
       }
       nav.appendChild(g);
     }
-    if (!node.length) nav.innerHTML = '<div class="kosong">Belum ada pelajaran/prosedur/norma tersimpan.</div>';
+    if (!node.length) nav.innerHTML = '<div class="kosong">Belum ada pelajaran, prosedur, atau norma tersimpan.</div>';
   }
 
   function pilihNode(id) {
@@ -265,7 +393,9 @@
     if (!n) return;
     document.querySelectorAll('nav .baris').forEach((b) => b.classList.toggle('aktif', b.dataset.id === id));
     const main = document.getElementById('main');
-    main.innerHTML = `<h2>${n.label}</h2><div class="stempel">${n.meta}</div><div class="isi"></div>`;
+    main.innerHTML = `<div class="kartu"><h2></h2><div class="stempel"></div><div class="isi"></div></div>`;
+    main.querySelector('h2').textContent = n.label;
+    main.querySelector('.stempel').textContent = n.meta;
     main.querySelector('.isi').textContent = n.detail || '';
     soroti(id);
     // Di layar sempit `main` sedang tersembunyi kalau tab lain yang aktif — tanpa pindah tab, menekan
@@ -292,9 +422,6 @@
   window.addEventListener('resize', ukur);
 
   // ---------------------------------------------------------------- tab panel (layar sempit)
-  // Di desktop ketiga panel tampil bersamaan dan tab-nya disembunyikan CSS; atribut ini tetap
-  // dipasang supaya keadaan awal tidak bergantung ukuran layar saat halaman dibuka (rotasi HP,
-  // jendela diubah ukurannya) — CSS yang memutuskan apakah tab dipakai, bukan JS.
   const tab = document.getElementById('tab');
   function pilihPanel(nama) {
     document.body.dataset.panel = nama;
@@ -303,16 +430,13 @@
       b.classList.toggle('aktif', aktif);
       b.setAttribute('aria-selected', aktif ? 'true' : 'false');
     }
-    // Panel papan baru punya ukuran SETELAH terlihat — ukur ulang, kalau tidak grafnya kosong.
-    // Penghitung energi juga di-nolkan: simulasi yang sudah "diam" berjalan ~4fps, dan penjepitan
-    // ke W/H yang baru akan terasa tersendat kalau tidak dibangunkan dulu.
     if (nama === 'papan') requestAnimationFrame(() => { ukur(); energiRendahBerturut = 0; });
   }
   tab.addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-panel]');
     if (b) pilihPanel(b.dataset.panel);
   });
-  pilihPanel('registri');   // mulai dari daftar: satu-satunya panel yang berguna sebelum ada pilihan
+  pilihPanel('registri');
 
   function gambarGraf() {
     ukur();
@@ -327,12 +451,12 @@
     }
     for (const n of node) {
       const g = document.createElementNS(svgNS, 'g');
-      const r = n.jenis === 'norma' ? 7 : n.jenis === 'instrumen' ? 5 : 6;
+      const r = n.jenis === 'norma' ? 7.5 : n.jenis === 'instrumen' ? 5 : 6.5;
       const c = document.createElementNS(svgNS, 'circle');
       c.setAttribute('r', r); c.setAttribute('fill', WARNA_JENIS[n.jenis]); c.setAttribute('class', 'simpul');
-      c.setAttribute('stroke', '#EEF0EA'); c.setAttribute('stroke-width', '1.5');
+      c.setAttribute('stroke', css('--simpul-tepi')); c.setAttribute('stroke-width', '2');
       const t = document.createElementNS(svgNS, 'text');
-      t.setAttribute('class', 'node-label'); t.setAttribute('dx', r + 4); t.setAttribute('dy', 4);
+      t.setAttribute('class', 'node-label'); t.setAttribute('dx', r + 5); t.setAttribute('dy', 4);
       t.textContent = n.label.length > 28 ? n.label.slice(0, 27) + '…' : n.label;
       g.appendChild(c); g.appendChild(t);
       svg.appendChild(g);
@@ -346,14 +470,18 @@
 
   function soroti(id) {
     if (!id) {
-      circleEl.forEach((c) => c.classList.remove('redup'));
+      circleEl.forEach((c) => { c.classList.remove('redup'); c.setAttribute('r', c.dataset.r || c.getAttribute('r')); });
       textEl.forEach((t) => t.classList.remove('redup'));
       lineEl.forEach((l) => l.classList.remove('redup'));
       return;
     }
     const terhubung = new Set([id]);
     for (const e of edge) if (e.a === id) terhubung.add(e.b); else if (e.b === id) terhubung.add(e.a);
-    circleEl.forEach((c, nid) => c.classList.toggle('redup', !terhubung.has(nid)));
+    circleEl.forEach((c, nid) => {
+      c.classList.toggle('redup', !terhubung.has(nid));
+      if (!c.dataset.r) c.dataset.r = c.getAttribute('r');
+      c.setAttribute('r', nid === id ? (+c.dataset.r) + 3 : c.dataset.r);
+    });
     textEl.forEach((t, nid) => t.classList.toggle('redup', !terhubung.has(nid)));
     lineEl.forEach((l, e) => l.classList.toggle('redup', !(terhubung.has(e.a) && terhubung.has(e.b))));
   }
