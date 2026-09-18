@@ -5,7 +5,7 @@ Keamanan (mengikuti temuan audit fp-dashboard):
 - INGAT_TOKEN wajib dari environment; tanpa itu server MENOLAK start (tidak ada fallback).
 - X-Forwarded-For hanya dipercaya bila server.proxy_tepercaya = true (di belakang Caddy).
 - Timeout socket, batas ukuran body, rate limit sederhana per IP.
-- Tidak ada endpoint tanpa autentikasi kecuali /sehat (tanpa data).
+- Tidak ada endpoint tanpa autentikasi kecuali /sehat, /dashboard, /pwa, /manifest.json, /sw.js (tanpa data).
 """
 from __future__ import annotations
 
@@ -299,6 +299,52 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 self.end_headers()
                 self.wfile.write(isi)
                 return
+
+            if path == "/pwa" or path == "/pwa/":
+                import os as _os
+                jalur = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "static", "pwa.html")
+                try:
+                    with open(jalur, "rb") as f:
+                        isi = f.read()
+                except FileNotFoundError:
+                    return self._kirim(404, {"galat": "static/pwa.html tidak ditemukan"})
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(isi)))
+                self.end_headers()
+                self.wfile.write(isi)
+                return
+
+            if path == "/manifest.json":
+                import os as _os
+                jalur = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "static", "manifest.json")
+                try:
+                    with open(jalur, "rb") as f:
+                        isi = f.read()
+                except FileNotFoundError:
+                    return self._kirim(404, {"galat": "manifest.json tidak ditemukan"})
+                self.send_response(200)
+                self.send_header("Content-Type", "application/manifest+json")
+                self.send_header("Content-Length", str(len(isi)))
+                self.end_headers()
+                self.wfile.write(isi)
+                return
+
+            if path == "/sw.js":
+                import os as _os
+                jalur = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "static", "sw.js")
+                try:
+                    with open(jalur, "rb") as f:
+                        isi = f.read()
+                except FileNotFoundError:
+                    return self._kirim(404, {"galat": "sw.js tidak ditemukan"})
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript")
+                self.send_header("Service-Worker-Allowed", "/")
+                self.send_header("Content-Length", str(len(isi)))
+                self.end_headers()
+                self.wfile.write(isi)
+                return
             if path == "/sehat":
                 return self._kirim(200, {"ok": True, "layanan": "ingat", "versi": __version__, "penulis": __penulis__})
             if path == "/openapi.json":
@@ -323,6 +369,15 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                     return self._kirim(200, app.gateway.buka_bukti(path[len("/bukti/"):], sesi=self.headers.get("X-Sesi", "")))
                 if path == "/usulan":
                     return self._kirim(200, app.vault.daftar_usulan() if app.vault else {})
+                if path == "/pwa/timeline":
+                    from .pantau import timeline_data
+                    return self._kirim(200, timeline_data(app))
+                if path == "/pwa/digest":
+                    from .digest import digest_7_hari
+                    return self._kirim(200, digest_7_hari(app.store))
+                if path == "/pwa/tinjau":
+                    from .pantau import hitungan_tinjau_snapshot
+                    return self._kirim(200, hitungan_tinjau_snapshot(app))
                 return self._kirim(404, {"galat": "tidak ada"})
             except KeyError as e:
                 return self._kirim(404, {"galat": str(e)})
@@ -457,6 +512,9 @@ def buat_handler(app: Aplikasi, token: str, konfig_server: dict, google: dict | 
                 if path.startswith("/prosedur/") and path.endswith("/eksekusi"):
                     pid = path[len("/prosedur/"):-len("/eksekusi")]
                     return self._kirim(200, app.konsolidator.catat_eksekusi_prosedur(pid, bool(b.get("berhasil"))))
+                if path == "/pwa/digest/hari":
+                    from .digest import digest_hari
+                    return self._kirim(200, digest_hari(app.store, b.get("tanggal")))
                 return self._kirim(404, {"galat": "tidak ada"})
             except (KeyError, ValueError, skema.TransisiTerlarang) as e:
                 return self._kirim(400, {"galat": f"{type(e).__name__}: {e}"})

@@ -1400,6 +1400,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Graf", lambda: buka("http://127.0.0.1:8790/graf", "graf")),
         ("Timeline", lambda: buka("http://127.0.0.1:8790/timeline", "timeline")),
         ("Digest", lambda: buka("http://127.0.0.1:8790/digest", "digest")),
+        ("PWA", lambda: buka("http://127.0.0.1:8765/pwa", "pwa")),
         ("Buka catatan", lambda: jalankan_aksi("catatan", aksi_catatan)),
         ("Koneksi AI", buka_koneksi),
         ("Rapikan nama", buka_judul),
