@@ -161,6 +161,50 @@ def status_koneksi(store) -> list[dict]:
     return hasil
 
 
+# Ambang kesehatan koneksi — memberi tahu kalau sebuah platform BERHENTI menulis diam-diam
+# (selektor DOM rusak saat situs ganti UI). ChatGPT sempat 0 episode tanpa alarm; ini menutup itu.
+KONEKSI_SEGAR_JAM = 48      # < 2 hari → hijau (sehat)
+KONEKSI_BASI_HARI = 7       # ≥ 7 hari PADAHAL pernah aktif → merah (curiga capture mati)
+
+
+def _parse_waktu(iso):
+    """ISO → datetime aware (UTC), atau None kalau tak terbaca."""
+    if not iso:
+        return None
+    try:
+        t = dt.datetime.fromisoformat(iso)
+        return t.replace(tzinfo=dt.timezone.utc) if t.tzinfo is None else t
+    except Exception:
+        return None
+
+
+def _usia_relatif(iso) -> str:
+    """'3 jam lalu' / '5 hari lalu' / 'belum ada rekam' — dibaca manusia di panel."""
+    t = _parse_waktu(iso)
+    if t is None:
+        return "belum ada rekam" if not iso else str(iso)[:16].replace("T", " ")
+    det = max(0.0, (dt.datetime.now(dt.timezone.utc) - t).total_seconds())
+    if det < 3600:
+        return f"{int(det // 60)} menit lalu"
+    if det < KONEKSI_SEGAR_JAM * 3600:
+        return f"{int(det // 3600)} jam lalu"
+    return f"{int(det // 86400)} hari lalu"
+
+
+def _kesehatan_koneksi(iso) -> tuple[str, str]:
+    """(simbol, tag_warna) dari umur rekam terakhir. Belum-pernah = netral (○, abu), BUKAN alarm —
+    alarm hanya untuk platform yang PERNAH aktif lalu terdiam (⚠ merah), gejala capture rusak."""
+    t = _parse_waktu(iso)
+    if t is None:
+        return "○", "abu"
+    jam = (dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 3600
+    if jam <= KONEKSI_SEGAR_JAM:
+        return "●", "hijau"
+    if jam >= KONEKSI_BASI_HARI * 24:
+        return "⚠", "merah"
+    return "●", "kuning"
+
+
 def _basis_sumberdaya() -> str:
     """Root berkas pendukung: _MEIPASS di dalam .exe, atau root repo saat dari source."""
     return getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -360,10 +404,16 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
         ttk.Label(f1, text="⚠ INGAT_TOKEN kosong — server 8765 & koneksi AI mati. Set env dulu.",
                   foreground="#b91c1c", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(0, 8))
 
-    f2 = ttk.LabelFrame(win, text=" Status klien (rekam episode terakhir) ")
+    f2 = ttk.LabelFrame(win, text=" Status klien (kapan terakhir menulis) ")
     f2.pack(fill="both", expand=True, padx=12, pady=6)
-    box = tk.Text(f2, height=7, font=("Consolas", 9), state="disabled", wrap="none")
-    box.pack(fill="both", expand=True, padx=6, pady=(6, 2))
+    lbl_ringkas = ttk.Label(f2, text="", font=("Segoe UI", 9))
+    lbl_ringkas.pack(anchor="w", padx=8, pady=(6, 0))
+    box = tk.Text(f2, height=8, font=("Consolas", 9), state="disabled", wrap="none")
+    box.pack(fill="both", expand=True, padx=6, pady=(4, 2))
+    box.tag_configure("hijau", foreground="#15803d")
+    box.tag_configure("kuning", foreground="#b45309")
+    box.tag_configure("merah", foreground="#b91c1c")
+    box.tag_configure("abu", foreground="#6b7280")
 
     def muat_status():
         try:
@@ -374,14 +424,24 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
             pesan_e = str(e)
         box.configure(state="normal"); box.delete("1.0", "end")
         if data is None:
-            box.insert("end", "gagal baca store: " + pesan_e + "\n")
-        else:
-            for d in data:
-                t = d["terakhir"]
-                tampil_t = t[:16].replace("T", " ") if t else "belum ada rekam"
-                box.insert("end", "{tn} {nm:<16} [{jl:<3}]  {tt}\n".format(
-                    tn=("●" if t else "○"), nm=d["nama"], jl=d["jalur"], tt=tampil_t))
+            lbl_ringkas.config(text="gagal baca store: " + pesan_e, foreground="#b91c1c")
+            box.configure(state="disabled")
+            return
+        basi = []
+        for d in data:
+            simbol, tag = _kesehatan_koneksi(d["terakhir"])
+            if tag == "merah":
+                basi.append(d["nama"])
+            baris = "{sm} {nm:<16} [{jl:<3}]  {tt}\n".format(
+                sm=simbol, nm=d["nama"], jl=d["jalur"], tt=_usia_relatif(d["terakhir"]))
+            box.insert("end", baris, tag)
         box.configure(state="disabled")
+        if basi:
+            lbl_ringkas.config(
+                text="⚠ " + ", ".join(basi) + " diam ≥7 hari — cek ekstensi/selektor platform itu.",
+                foreground="#b91c1c")
+        else:
+            lbl_ringkas.config(text="Semua platform yang pernah aktif masih menulis.", foreground="#15803d")
 
     muat_status()
     ttk.Button(f2, text="Segarkan", command=muat_status).pack(anchor="e", padx=6, pady=(0, 6))

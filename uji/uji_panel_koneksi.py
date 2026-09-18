@@ -52,6 +52,36 @@ class StatusKoneksi(unittest.TestCase):
             self.assertIsNone(d["terakhir"])
 
 
+class KesehatanKoneksi(unittest.TestCase):
+    """Penanda basi: platform yang PERNAH aktif lalu terdiam ≥7 hari → ⚠ merah (capture rusak
+    diam-diam, spt ChatGPT dulu). Belum-pernah = netral, bukan alarm."""
+
+    def _iso(self, jam_lalu):
+        import datetime as dt
+        return (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=jam_lalu)).isoformat(timespec="seconds")
+
+    def test_segar_hijau(self):
+        self.assertEqual(panel._kesehatan_koneksi(self._iso(2)), ("●", "hijau"))
+        self.assertEqual(panel._kesehatan_koneksi(self._iso(47)), ("●", "hijau"))
+
+    def test_setengah_basi_kuning(self):
+        self.assertEqual(panel._kesehatan_koneksi(self._iso(4 * 24)), ("●", "kuning"))
+
+    def test_basi_merah_alarm(self):
+        self.assertEqual(panel._kesehatan_koneksi(self._iso(8 * 24)), ("⚠", "merah"))
+
+    def test_belum_pernah_netral_bukan_alarm(self):
+        self.assertEqual(panel._kesehatan_koneksi(None), ("○", "abu"))
+
+    def test_iso_rusak_tak_melempar(self):
+        self.assertEqual(panel._kesehatan_koneksi("bukan-tanggal"), ("○", "abu"))
+
+    def test_usia_relatif_terbaca(self):
+        self.assertEqual(panel._usia_relatif(None), "belum ada rekam")
+        self.assertIn("jam lalu", panel._usia_relatif(self._iso(5)))
+        self.assertIn("hari lalu", panel._usia_relatif(self._iso(3 * 24)))
+
+
 class Token(unittest.TestCase):
     def test_token_ada_dipangkas(self):
         with mock.patch.dict(os.environ, {"INGAT_TOKEN": "  abc123  "}):
