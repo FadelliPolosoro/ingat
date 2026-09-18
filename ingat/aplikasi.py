@@ -44,6 +44,11 @@ def muat_konfig(path: str | None = None) -> dict:
     # env menimpa lokasi
     k["dir_data"] = os.environ.get("INGAT_DIR_DATA", k["dir_data"])
     k["vault"] = os.environ.get("INGAT_VAULT", k["vault"])
+    # env menimpa allowlist Google (INGAT_ALLOWED_EMAILS, dipisah koma) — supaya email pribadi tak
+    # perlu ditanam di source/repo. Bila env kosong DAN konfig juga kosong, tetap fail-closed ([]).
+    env_email = os.environ.get("INGAT_ALLOWED_EMAILS", "").strip()
+    if env_email:
+        k.setdefault("auth", {})["allowed_emails"] = [e.strip() for e in env_email.split(",") if e.strip()]
     return k
 
 

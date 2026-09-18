@@ -120,6 +120,28 @@ def token_server() -> str | None:
     return t or None
 
 
+def siapkan_allowlist() -> list[str]:
+    """Allowlist email login Google. Resolusi: env INGAT_ALLOWED_EMAILS → berkas
+    ~/.ingat/allowlist.txt (satu email per baris). Email SENGAJA tak ditanam di source
+    supaya tak ikut ke repo publik — berkasnya milik mesin ini saja. Nilai yang ditemukan
+    diekspor balik ke env sebelum muat_konfig() dibaca, jadi server 8765 langsung menerimanya
+    dan login Google dengan email itu masuk otomatis (cookie sesi -> /dashboard tanpa langkah lagi).
+    Kembalikan daftar email; [] berarti fail-closed (login Google menolak semua)."""
+    env = os.environ.get("INGAT_ALLOWED_EMAILS", "").strip()
+    if env:
+        return [e.strip() for e in env.split(",") if e.strip()]
+    berkas = os.path.join(DIR_INGAT, "allowlist.txt")
+    try:
+        with open(berkas, encoding="utf-8-sig") as f:
+            emails = [b.strip() for b in f if b.strip() and not b.lstrip().startswith("#")]
+        if emails:
+            os.environ["INGAT_ALLOWED_EMAILS"] = ",".join(emails)
+            return emails
+    except OSError:
+        pass
+    return []
+
+
 def status_koneksi(store) -> list[dict]:
     """Untuk tiap klien AI: waktu (iso) episode terbaru dari sumbernya, atau None.
     Dibaca dari store — bukti nyata rekam masuk, bukan tebakan."""
@@ -675,6 +697,7 @@ def jalankan(konfig: str | None = None) -> int:
     from . import __version__
     from .aplikasi import Aplikasi, muat_konfig
 
+    siapkan_allowlist()  # ekspor INGAT_ALLOWED_EMAILS dari ~/.ingat/allowlist.txt sebelum konfig dibaca
     app = Aplikasi(muat_konfig(konfig))
     penanya_ref = {}  # simpan path tanya terakhir untuk tombol Jawab
 

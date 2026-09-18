@@ -91,6 +91,6 @@
   "auth": {
     "allowed_emails": [],
     "redirect_uri": "",
-    "_catatan": "Isi allowed_emails dengan email Google yang boleh masuk dashboard (wajib, tanpa ini SIAPA PUN dengan akun Google ditolak). redirect_uri HARUS persis sama dengan yang didaftarkan di Google Cloud Console: https://<domain>/auth/google/callback"
+    "_catatan": "Isi allowed_emails dengan email Google yang boleh masuk dashboard (wajib, tanpa ini SIAPA PUN dengan akun Google ditolak). Alternatif tanpa menaruh email di berkas: env INGAT_ALLOWED_EMAILS (dipisah koma) atau berkas ~/.ingat/allowlist.txt (satu email per baris) — panel .exe membacanya otomatis. redirect_uri HARUS persis sama dengan yang didaftarkan di Google Cloud Console: https://<domain>/auth/google/callback"
   }
 }
