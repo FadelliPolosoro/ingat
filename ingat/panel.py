@@ -250,6 +250,24 @@ def bangun_mcpb() -> str:
     return tujuan
 
 
+def bangun_ekstensi_zip() -> str:
+    """Bungkus ekstensi web jadi SATU berkas `~/.ingat/ingat-ekstensi.zip` untuk diunduh, dipindah ke
+    perangkat/browser lain, atau dibackup. Manifest.json ADA DI ROOT zip supaya sekali unzip langsung
+    jadi folder yang bisa 'Load unpacked'. Catatan (dok Chrome resmi): di luar Web Store, Windows/Mac
+    HANYA bisa lewat 'Load unpacked' folder — Chrome tak memasang .zip/.crx sekali klik. .zip = transport."""
+    import zipfile
+    asal = os.path.join(_basis_sumberdaya(), "pasang", "browser-extension")
+    tujuan = os.path.join(DIR_INGAT, "ingat-ekstensi.zip")
+    with zipfile.ZipFile(tujuan, "w", zipfile.ZIP_DEFLATED) as z:
+        for akar, _dirs, berkas in os.walk(asal):
+            for b in berkas:
+                if b.endswith((".mjs", ".pyc")):  # berkas uji/dev — tak perlu di paket
+                    continue
+                penuh = os.path.join(akar, b)
+                z.write(penuh, os.path.relpath(penuh, asal))  # relatif ke akar → manifest.json di root zip
+    return tujuan
+
+
 def uji_koneksi(host: str, token, timeout: float = 3.0) -> tuple[bool, str]:
     """Uji server 8765 hidup + token valid. Dijalankan live saat tombol diklik."""
     import urllib.error
@@ -489,9 +507,9 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
     f4.pack(fill="x", padx=12, pady=(6, 12))
 
     _PANDUAN = (
-        "AI web (ChatGPT · Gemini · Claude.ai · Perplexity)  →  Ekstensi web\n"
-        "    Tombol di bawah menyiapkan folder di:  ~/.ingat/browser-extension\n"
-        "    Pasang: chrome://extensions → Developer mode → Load unpacked → pilih folder itu.\n"
+        "AI web (ChatGPT · Gemini · Claude.ai · Perplexity · DeepSeek · Kimi)  →  Ekstensi web (satu pasang)\n"
+        "    'Siapkan ekstensi web' → folder ~/.ingat/browser-extension → Load unpacked di chrome://extensions.\n"
+        "    'Bangun ekstensi .zip' → satu berkas untuk pindah perangkat/backup (unzip dulu, lalu Load unpacked).\n"
         "\n"
         "Claude Desktop  →  MCPB (cara resmi Claude Desktop 2026)\n"
         "    Tombol di bawah MEMBANGUN berkas siap-pasang:  ~/.ingat/ingat.mcpb\n"
@@ -543,8 +561,32 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
         except Exception as e:
             messagebox.showerror("Gagal membangun MCPB", str(e))
 
+    def bikin_ekstensi_zip():
+        try:
+            berkas = bangun_ekstensi_zip()
+            tulis_log("ekstensi .zip dibangun: " + berkas)
+            try:
+                import subprocess
+                subprocess.Popen(["explorer", "/select,", berkas])
+            except Exception:
+                try:
+                    os.startfile(os.path.dirname(berkas))
+                except Exception:
+                    pass
+            messagebox.showinfo("Ekstensi .zip siap (untuk unduh / pindah perangkat)",
+                "Berkas:\n" + berkas +
+                "\n\nGunanya: dipindah ke komputer/browser lain atau dibackup.\n"
+                "Chrome TIDAK memasang .zip langsung (batas Chrome, di luar Web Store):\n"
+                "1. Unzip ke folder tetap (mis. Documents\\ingat-ekstensi)\n"
+                "2. chrome://extensions → Developer mode → Load unpacked → pilih folder itu\n"
+                "3. Opsi ekstensi: isi Host + Token (tombol Salin di jendela ini)\n\n"
+                "Mencakup: ChatGPT, Claude.ai, Gemini, Perplexity, DeepSeek, Kimi.")
+        except Exception as e:
+            messagebox.showerror("Gagal membangun ekstensi .zip", str(e))
+
     barisf4 = ttk.Frame(f4); barisf4.pack(fill="x", padx=8, pady=(0, 8))
     ttk.Button(barisf4, text="Siapkan ekstensi web", command=pasang_ekstensi).pack(side="left", padx=(2, 6))
+    ttk.Button(barisf4, text="Bangun ekstensi .zip", command=bikin_ekstensi_zip).pack(side="left", padx=(0, 6))
     ttk.Button(barisf4, text="Bangun ingat.mcpb (Claude Desktop)", command=pasang_mcpb).pack(side="left")
 
     # -- sambungkan otomatis ke Claude Desktop LEWAT mcpServers — LEGACY (Claude Desktop lama).

@@ -138,6 +138,21 @@ class Siapkan(unittest.TestCase):
             self.assertTrue(m["server"]["mcp_config"]["command"])  # path python terisi
             self.assertEqual(m["server"]["entry_point"], "server/main.py")
 
+    def test_bangun_ekstensi_zip_manifest_di_root(self):
+        import zipfile
+        p = panel.bangun_ekstensi_zip()
+        self.assertEqual(p, os.path.join(self.dir, "ingat-ekstensi.zip"))
+        self.assertTrue(os.path.isfile(p))
+        with zipfile.ZipFile(p) as z:
+            nama = z.namelist()
+            self.assertIn("manifest.json", nama)  # di ROOT → langsung Load unpacked setelah unzip
+            self.assertNotIn("browser-extension/manifest.json", nama)  # bukan nested
+            self.assertFalse(any(n.endswith(".mjs") for n in nama))  # berkas uji dikecualikan
+            m = json.loads(z.read("manifest.json"))
+            hosts = " ".join(m.get("host_permissions", []))
+            self.assertIn("kimi.com", hosts)
+            self.assertIn("gemini.google.com", hosts)
+
 
 class JendelaKoneksi(KasusTk):
     """Smoke test: jendela Koneksi AI benar-benar terbangun (Tk asli) di atas store nyata.
