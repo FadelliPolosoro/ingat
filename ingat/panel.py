@@ -603,6 +603,82 @@ def bangun_jendela_koneksi(root, app, tulis_log=None):
     return win
 
 
+def bangun_jendela_judul(root, app, tulis_log=None):
+    """Jendela 'Rapikan nama memori': beri judul bersih & deskriptif ke tiap episode dengan
+    mempelajari isinya (heuristik). NON-DESTRUKTIF — judul di tabel sidecar, `sumber`/`ringkas`
+    asli tak disentuh; ada Undo. Module-level supaya bisa di-smoke-test headless."""
+    import tkinter as tk
+    from tkinter import messagebox, ttk
+    from . import judul_memori as JM
+    if tulis_log is None:
+        tulis_log = lambda *_: None  # noqa: E731
+
+    win = tk.Toplevel(root)
+    win.title("ingat — Rapikan nama memori")
+    win.geometry("720x560")
+    win.minsize(600, 460)
+
+    ttk.Label(win, text="Beri judul bersih & deskriptif ke tiap memori (mempelajari isinya).",
+              font=("Segoe UI", 10)).pack(anchor="w", padx=12, pady=(12, 0))
+    ttk.Label(win, text="Non-destruktif: asal & ringkas asli tak disentuh; bisa di-Undo.",
+              foreground="#6b7280", font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(0, 6))
+
+    lbl = ttk.Label(win, text="", font=("Segoe UI Semibold", 10))
+    lbl.pack(anchor="w", padx=12)
+    box = tk.Text(win, font=("Consolas", 9), state="disabled", wrap="none")
+    box.pack(fill="both", expand=True, padx=12, pady=6)
+    sib = {"sibuk": False}
+
+    def _tulis_contoh(contoh):
+        box.configure(state="normal"); box.delete("1.0", "end")
+        box.insert("end", "{r:<40}    JUDUL rapi\n".format(r="RINGKAS / asal lama"))
+        box.insert("end", ("-" * 88) + "\n")
+        for c in contoh:
+            box.insert("end", "{r:<40} →  {j}\n".format(r=(c["ringkas"] or c["sumber"])[:38], j=c["judul"]))
+        box.configure(state="disabled")
+
+    def _jalankan(tulis):
+        if sib["sibuk"]:
+            return
+        sib["sibuk"] = True
+        lbl.config(text=("merapikan…" if tulis else "menyusun pratinjau…"), foreground="#6b7280")
+
+        def kerja():
+            try:
+                hasil, galat = JM.rapikan(app.store, tulis=tulis), ""
+            except Exception as e:
+                hasil, galat = None, str(e)
+
+            def selesai():
+                sib["sibuk"] = False
+                if galat:
+                    lbl.config(text="gagal: " + galat, foreground="#b91c1c"); return
+                kata = "Ditulis" if tulis else "Pratinjau"
+                lbl.config(text=f"{kata}: {hasil['diproses']} memori diberi judul.", foreground="#15803d")
+                _tulis_contoh(hasil["contoh"])
+                if tulis:
+                    tulis_log(f"rapikan nama memori: {hasil['ditulis']} judul ditulis")
+            root.after(0, selesai)
+        threading.Thread(target=kerja, daemon=True).start()
+
+    def _undo():
+        if not messagebox.askyesno("Undo", "Hapus semua judul rapi? (memori asli tak tersentuh)", parent=win):
+            return
+        n = JM.kosongkan(app.store)
+        lbl.config(text=f"Undo: {n} judul dihapus.", foreground="#6b7280")
+        box.configure(state="normal"); box.delete("1.0", "end"); box.configure(state="disabled")
+        tulis_log(f"rapikan nama memori: undo, {n} judul dihapus")
+
+    bar = ttk.Frame(win); bar.pack(fill="x", padx=12, pady=(0, 12))
+    ttk.Button(bar, text="Pratinjau", command=lambda: _jalankan(False)).pack(side="left")
+    ttk.Button(bar, text="Rapikan sekarang", command=lambda: _jalankan(True)).pack(side="left", padx=6)
+    ttk.Button(bar, text="Undo", command=_undo).pack(side="left")
+    n0 = JM.berapa_berjudul(app.store)
+    lbl.config(text=(f"{n0} memori sudah berjudul." if n0 else "Belum ada yang dirapikan. Klik Pratinjau."))
+    _jalankan(False)  # auto-pratinjau saat dibuka
+    return win
+
+
 def bangun_jendela_cari(root, app, tulis_log=None, gerbang=None, store=None):
     """Jendela 'Cari memori': satu pertanyaan bebas → kutipan memori yang cocok.
 
@@ -900,6 +976,10 @@ def jalankan(konfig: str | None = None) -> int:
         catat_pemakaian("buka-cari")
         bangun_jendela_cari(root, app, tulis_log, cari_ref["gerbang"], cari_ref["store"])
 
+    def buka_judul():
+        catat_pemakaian("rapikan-nama")
+        bangun_jendela_judul(root, app, tulis_log)
+
     # -- tombol utama (grid 3 kolom)
     tombol = ttk.Frame(root)
     tombol.pack(fill="x", padx=12, pady=6)
@@ -914,6 +994,7 @@ def jalankan(konfig: str | None = None) -> int:
         ("Graf", lambda: buka("http://127.0.0.1:8790/graf", "graf")),
         ("Buka Obsidian", lambda: jalankan_aksi("obsidian", aksi_obsidian)),
         ("Koneksi AI", buka_koneksi),
+        ("Rapikan nama", buka_judul),
     ]
     for idx, (teks, cmd) in enumerate(daftar_tombol):
         ttk.Button(tombol, text=teks, command=cmd).grid(
